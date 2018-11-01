@@ -62,7 +62,7 @@ namespace EmpyrionModHost
                 var ModFilename = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), aFileName);
 
                 mGameAPI.Console_Write($"ModDispatcher: load {ModFilename}");
-                var Mod = Assembly.LoadFrom(ModFilename);
+                var Mod = Assembly.LoadFile(ModFilename);
                 var ModType = Mod.GetTypes().Where(T => T.GetInterfaces().Contains(typeof(ModInterface))).FirstOrDefault();
                 if (ModType != null)
                 {
@@ -71,6 +71,11 @@ namespace EmpyrionModHost
                     mGameAPI.Console_Write($"ModDispatcher: loaded {ModFilename}");
                 }
                 else mGameAPI.Console_Write($"ModDispatcher: no ModInterface class found");
+            }
+            catch (ReflectionTypeLoadException Error)
+            {
+                mGameAPI.Console_Write($"ModDispatcher: {aFileName} -> {Error}");
+                Array.ForEach(Error.LoaderExceptions, E => mGameAPI.Console_Write($"ModDispatcher: {aFileName} -> LE:{E}"));
             }
             catch (Exception Error)
             {

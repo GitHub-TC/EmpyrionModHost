@@ -31,6 +31,7 @@ namespace EmpyrionModClient
         public DateTime? mHostProcessAlive { get; private set; }
         public static string ProgramPath { get; private set; } = Directory.GetCurrentDirectory();
         public bool WithinExit { get; private set; }
+        public bool ExposeShutdownHost { get; private set; }
 
         Dictionary<Type, Action<object>> InServerMessageHandler;
 
@@ -57,7 +58,7 @@ namespace EmpyrionModClient
             WithinExit = true;
             OutServer?.SendMessage(new ClientHostComData() { Command = ClientHostCommand.Game_Exit });
 
-            if (CurrentConfig.Current.AutoshutdownModHost && mHostProcess != null)
+            if (!ExposeShutdownHost && CurrentConfig.Current.AutoshutdownModHost && mHostProcess != null)
             {
                 try
                 {
@@ -202,8 +203,9 @@ namespace EmpyrionModClient
         {
             switch (aMsg.Command)
             {
-                case ClientHostCommand.RestartHost: break;
-                case ClientHostCommand.Console_Write: GameAPI.Console_Write(aMsg.Data as string); break;
+                case ClientHostCommand.RestartHost          : break;
+                case ClientHostCommand.ExposeShutdownHost   : ExposeShutdownHost = true; break;
+                case ClientHostCommand.Console_Write        : GameAPI.Console_Write(aMsg.Data as string); break;
             }
         }
 

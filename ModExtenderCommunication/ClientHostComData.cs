@@ -7,7 +7,8 @@ namespace ModExtenderCommunication
         Game_Exit,
         RestartHost,
         Game_Update,
-        Console_Write
+        Console_Write,
+        ExposeShutdownHost
     }
 
     [Serializable]

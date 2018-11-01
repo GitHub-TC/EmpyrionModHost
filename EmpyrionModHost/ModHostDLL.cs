@@ -2,10 +2,6 @@
 using ModExtenderCommunication;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Pipes;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 
 namespace EmpyrionModHost
 {
