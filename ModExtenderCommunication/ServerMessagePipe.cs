@@ -3,25 +3,10 @@ using System.IO;
 using System.IO.Pipes;
 using System.Threading;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Collections.Generic;
 
 namespace ModExtenderCommunication
 {
-    public static class NamedPipeExtensions{
-        public static void WaitForConnectionEx(this NamedPipeServerStream aStream)
-        {
-            Exception Error = null;
-            AutoResetEvent aAutoResetEvent = new AutoResetEvent(false);
-            aStream.BeginWaitForConnection(A =>
-            {
-                try { aStream.EndWaitForConnection(A); }
-                catch (Exception WaitError) { Error = WaitError; }
-                finally { aAutoResetEvent.Set(); }
-            }, null);
-            aAutoResetEvent.WaitOne();
-            if (Error != null) throw Error; // rethrow exception
-        }
-    }
-
     public class ServerMessagePipe : IDisposable
     {
         byte[] mMessageBuffer = new byte[2048];
@@ -40,6 +25,7 @@ namespace ModExtenderCommunication
 
         private void ServerCommunicationLoop()
         {
+            var ShownErrors = new List<string>();
             while (mServerCommThread.ThreadState != ThreadState.AbortRequested)
             {
                 try
@@ -49,7 +35,11 @@ namespace ModExtenderCommunication
                 catch (ThreadAbortException) { return; }
                 catch (Exception Error)
                 {
-                    log?.Invoke($"Failed ExecServerCommunication. {PipeName} Reason: " + Error.Message);
+                    if (!ShownErrors.Contains(Error.Message))
+                    {
+                        ShownErrors.Add(Error.Message);
+                        log?.Invoke($"Failed ExecServerCommunication. {PipeName} Reason: " + Error.Message);
+                    }
                 }
             }
         }
@@ -58,7 +48,8 @@ namespace ModExtenderCommunication
         {
             using (mServerPipe = new NamedPipeServerStream(PipeName, PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous))
             {
-                mServerPipe.WaitForConnectionEx();
+                mServerPipe.WaitForConnection();
+                log?.Invoke($"ServerPipe: {PipeName} connected");
                 while (mServerPipe.IsConnected && mServerCommThread.ThreadState != ThreadState.AbortRequested)
                 {
                     var Message = ReadNextMessage();
@@ -85,7 +76,7 @@ namespace ModExtenderCommunication
                     MessageLength += BytesRead;
                     MemBuffer.Write(mMessageBuffer, 0, BytesRead);
                 }
-                while (MessageLength < Size);
+                while (MessageLength < Size && mServerCommThread.ThreadState != ThreadState.AbortRequested);
 
                 if (MessageLength == 0) return null;
 
@@ -106,7 +97,19 @@ namespace ModExtenderCommunication
         {
             try
             {
-                mServerCommThread?.Abort(); mServerCommThread = null;
+                mServerCommThread?.Abort();
+
+                new Thread(() => {
+                    try
+                    {
+                        var ClientPipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out, PipeOptions.Asynchronous);
+                        ClientPipe.Connect(1);
+                        ClientPipe.Close();
+                    }
+                    catch { }
+                }).Start();
+
+                mServerCommThread = null;
                 mServerPipe?.Close();mServerPipe = null;
             }
             catch (Exception Error)

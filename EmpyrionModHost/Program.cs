@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace EmpyrionModHost
 {
@@ -7,9 +8,11 @@ namespace EmpyrionModHost
     {
         static void Main(string[] args)
         {
+            var Exit = new AutoResetEvent(false);
             var Host = new ModHostDLL();
+            Host.GameExit += (S, A) => Exit.Set();
             Host.InitComunicationChannels();
-            Console.ReadLine();
+            Exit.WaitOne();
         }
 
     }

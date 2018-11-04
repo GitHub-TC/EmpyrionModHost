@@ -16,9 +16,10 @@ namespace EmpyrionModHost
     public class ModDispatcher : ModInterface
     {
         string mDllNamesFileName { get; set; }
-        ModGameAPI mGameAPI { get; set; }
+        public ModGameAPI GameAPI { get; set; }
         string[] mAssemblyFileNames { get; set; }
         List<ModInterface> mModInstance { get; set; } = new List<ModInterface>();
+        public event EventHandler GameExit;
 
         public void Game_Event(CmdId eventId, ushort seqNr, object data)
         {
@@ -28,15 +29,16 @@ namespace EmpyrionModHost
         public void Game_Exit()
         {
             Parallel.ForEach(mModInstance, M => M.Game_Exit());
+            GameExit?.Invoke(this, null);
         }
 
         public void Game_Start(ModGameAPI dediAPI)
         {
             mDllNamesFileName = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), "DllNames.txt");
-            mGameAPI = dediAPI;
+            GameAPI = dediAPI;
             try
             {
-                mGameAPI.Console_Write($"ModDispatcher(start): {mDllNamesFileName}");
+                GameAPI.Console_Write($"ModDispatcher(start): {mDllNamesFileName}");
 
                 mAssemblyFileNames = File.ReadAllLines(mDllNamesFileName)
                     .Select(L => L.Trim())
@@ -45,13 +47,13 @@ namespace EmpyrionModHost
 
                 Array.ForEach(mAssemblyFileNames, LoadAssembly);
 
-                Parallel.ForEach(mModInstance, M => M.Game_Start(mGameAPI));
+                Parallel.ForEach(mModInstance, M => M.Game_Start(GameAPI));
 
-                mGameAPI.Console_Write($"ModDispatcher(finish:{mModInstance.Count}): {mDllNamesFileName}");
+                GameAPI.Console_Write($"ModDispatcher(finish:{mModInstance.Count}): {mDllNamesFileName}");
             }
             catch (Exception Error)
             {
-                mGameAPI.Console_Write($"ModDispatcher: {mDllNamesFileName} -> {Error}");
+                GameAPI.Console_Write($"ModDispatcher: {mDllNamesFileName} -> {Error}");
             }
         }
 
@@ -61,25 +63,25 @@ namespace EmpyrionModHost
             {
                 var ModFilename = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), aFileName);
 
-                mGameAPI.Console_Write($"ModDispatcher: load {ModFilename}");
+                GameAPI.Console_Write($"ModDispatcher: load {ModFilename}");
                 var Mod = Assembly.LoadFile(ModFilename);
                 var ModType = Mod.GetTypes().Where(T => T.GetInterfaces().Contains(typeof(ModInterface))).FirstOrDefault();
                 if (ModType != null)
                 {
                     var ModInstance = Activator.CreateInstance(ModType) as ModInterface;
                     mModInstance.Add(ModInstance);
-                    mGameAPI.Console_Write($"ModDispatcher: loaded {ModFilename}");
+                    GameAPI.Console_Write($"ModDispatcher: loaded {ModFilename}");
                 }
-                else mGameAPI.Console_Write($"ModDispatcher: no ModInterface class found");
+                else GameAPI.Console_Write($"ModDispatcher: no ModInterface class found");
             }
             catch (ReflectionTypeLoadException Error)
             {
-                mGameAPI.Console_Write($"ModDispatcher: {aFileName} -> {Error}");
-                Array.ForEach(Error.LoaderExceptions, E => mGameAPI.Console_Write($"ModDispatcher: {aFileName} -> LE:{E}"));
+                GameAPI.Console_Write($"ModDispatcher: {aFileName} -> {Error}");
+                Array.ForEach(Error.LoaderExceptions, E => GameAPI.Console_Write($"ModDispatcher: {aFileName} -> LE:{E}"));
             }
             catch (Exception Error)
             {
-                mGameAPI.Console_Write($"ModDispatcher: {aFileName} -> {Error}");
+                GameAPI.Console_Write($"ModDispatcher: {aFileName} -> {Error}");
             }
         }
 

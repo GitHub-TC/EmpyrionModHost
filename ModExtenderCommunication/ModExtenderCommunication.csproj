@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="ClientHostComData.cs" />
     <Compile Include="ClientMessagePipe.cs" />
+    <Compile Include="CommandLineOptions.cs" />
     <Compile Include="GameEventData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerMessagePipe.cs" />

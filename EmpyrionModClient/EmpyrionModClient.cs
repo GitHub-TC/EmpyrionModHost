@@ -36,6 +36,7 @@ namespace EmpyrionModClient
         Dictionary<Type, Action<object>> InServerMessageHandler;
 
         ConfigurationManager<Configuration> CurrentConfig;
+        private Thread mGame_Update_CheckHostProcess;
 
         public void Game_Event(CmdId eventId, ushort seqNr, object data)
         {
@@ -76,15 +77,6 @@ namespace EmpyrionModClient
 
             InServer?.Close();
             OutServer?.Close();
-
-            // EmpyrionMainProcess: terminiert nicht ?!?!
-            new Thread(() => {
-                for (int i = 0; i < 10000000; i++)
-                {
-                    var x = Math.Sin(new Random().NextDouble());
-                }
-                Process.GetCurrentProcess().CloseMainWindow();
-            }).Start();
         }
 
         public void Game_Start(ModGameAPI dediAPI)
@@ -129,6 +121,7 @@ namespace EmpyrionModClient
         {
             var HostFilename = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), CurrentConfig.Current.PathToModHost);
             GameAPI.Console_Write($"ModClientDll: start host '{HostFilename}'");
+            mHostProcessAlive = null;
 
             if (CurrentConfig.Current.HostProcessId != 0)
             {
@@ -218,7 +211,11 @@ namespace EmpyrionModClient
         {
             if (WithinExit) return;
 
-            CheckHostProcess();
+            if (mGame_Update_CheckHostProcess == null || !mGame_Update_CheckHostProcess.IsAlive) { 
+                mGame_Update_CheckHostProcess = new Thread(() => { Thread.Sleep(1000); CheckHostProcess(); });
+                mGame_Update_CheckHostProcess.Start();
+            }
+
             OutServer?.SendMessage(new ClientHostComData() { Command = ClientHostCommand.Game_Update });
         }
     }

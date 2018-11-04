@@ -45,6 +45,7 @@ namespace ModExtenderCommunication
                             }
                             catch (TimeoutException)
                             {
+                                Thread.Sleep(1000);
                             }
                         } while (mClientPipe == null || !mClientPipe.IsConnected);
                     }

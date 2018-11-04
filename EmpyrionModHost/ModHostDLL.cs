@@ -11,6 +11,7 @@ namespace EmpyrionModHost
         public ServerMessagePipe FromEmpyrion { get; private set; }
         public Dictionary<Type, Action<object>> InServerMessageHandler { get; }
         public ModDispatcher Dispatcher { get; private set; }
+        public event EventHandler GameExit;
 
         public ModHostDLL()
         {
@@ -22,13 +23,21 @@ namespace EmpyrionModHost
 
         public void InitComunicationChannels()
         {
-            ToEmpyrion   = new ClientMessagePipe(CommandLineOptions.GetOption("-ModToEmpyrionPipe", "ModToEmpyrionPipe")) { log = Console.WriteLine };
-            FromEmpyrion = new ServerMessagePipe(CommandLineOptions.GetOption("-EmpyrionToModPipe", "EmpyrionToModPipe")) { log = Console.WriteLine };
+            Dispatcher = new ModDispatcher();
+
+            ToEmpyrion   = new ClientMessagePipe(CommandLineOptions.GetOption("-ModToEmpyrionPipe", "ModToEmpyrionPipe")) { log = LogOut };
+            FromEmpyrion = new ServerMessagePipe(CommandLineOptions.GetOption("-EmpyrionToModPipe", "EmpyrionToModPipe")) { log = LogOut };
 
             FromEmpyrion.Callback = Msg => { if (InServerMessageHandler.TryGetValue(Msg.GetType(), out Action<object> Handler)) Handler(Msg); };
 
-            Dispatcher = new ModDispatcher();
+            Dispatcher.GameExit += (S, A) => GameExit?.Invoke(this, null);
             Dispatcher.Game_Start(this);
+        }
+
+        private void LogOut(string aMsg)
+        {
+            if (Dispatcher != null && Dispatcher.GameAPI != null) Dispatcher.GameAPI.Console_Write(aMsg);
+            else                                                  Console.WriteLine(aMsg);
         }
 
         private void HandleClientHostCommunication(ClientHostComData aMsg)
@@ -44,9 +53,7 @@ namespace EmpyrionModHost
         private void HandleGameEvent(EmpyrionGameEventData aMsg)
         {
             Console.WriteLine($"Game_Event:{aMsg.eventId}#{aMsg.seqNr} = {aMsg.data}");
-
             Dispatcher?.Game_Event(aMsg.eventId, aMsg.seqNr, aMsg.data);
-            Game_Request(aMsg.eventId, aMsg.seqNr, aMsg.data);
         }
 
         public void Console_Write(string aMsg)

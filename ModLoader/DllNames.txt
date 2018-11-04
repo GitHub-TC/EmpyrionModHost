@@ -2,4 +2,4 @@
 # - der Pfad kann relativ zu diesem Verzeichnis angegeben werden
 # - Leerzeilen sind erlaubt
 # - Kommentarzeilen beginnnen mit einen #
-EWA\Client\EmpyrionModClient.dll
+Client\EmpyrionModClient.dll

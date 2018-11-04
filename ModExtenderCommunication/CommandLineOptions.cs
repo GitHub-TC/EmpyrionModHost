@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace EmpyrionModHost
+namespace ModExtenderCommunication
 {
     public static class CommandLineOptions
 
