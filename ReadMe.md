@@ -17,3 +17,25 @@ Entkoppeln der MOD.DLLs um diese:
 
 # Bekannte Fehler
 Das wieder Starten des Hostprozesses (durch das entfernen der "stop.txt" Datei), bei einem laufenden Empyrion, lässt diesen abstürzen ?!?!
+
+# English version
+
+# Empyrion ModLoader / Client / Host
+
+## Goal
+Decoupling the MOD.DLLs by:
+- to be able to start / stop in the current game.
+- Add / disable mods
+- be able to write mods with> = .NET 4.6
+- Mods may consist of several DLLs
+- Mods can be easily inspected by debugger.
+
+## Configuration
+* ModLoader: "DllNames.txt" with the path to the ClientDLL
+* Client: "Configuration.xml" Configuration of the host process, the pipe names and the start / stop behavior
+* If there is a "stop.txt" file in the directory in which also the "Configuration.xml" is located, the host process becomes
+Shut down and not (automatically) restarted.
+* Host: "DllNames.txt" paths to the MOD.DLLs which should be loaded
+
+# Known bugs
+Restarting the host process (by removing the "stop.txt" file) while running Empyrion causes it to crash?!?!
