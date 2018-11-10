@@ -17,6 +17,7 @@ namespace ModExtenderCommunication
 
         public string PipeName { get; }
         public Action LoopPing { get; set; }
+        public bool Exit { get; private set; }
 
         public ClientMessagePipe(string aPipeName)
         {
@@ -27,7 +28,7 @@ namespace ModExtenderCommunication
 
         private void CommunicationLoop()
         {
-            while (mCommThread.ThreadState != ThreadState.AbortRequested)
+            while (!Exit)
             {
                 try
                 {
@@ -43,11 +44,9 @@ namespace ModExtenderCommunication
                                 mClientPipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out, PipeOptions.Asynchronous);
                                 mClientPipe.Connect(1000);
                             }
-                            catch (TimeoutException)
-                            {
-                                Thread.Sleep(1000);
-                            }
-                        } while (mClientPipe == null || !mClientPipe.IsConnected);
+                            catch (IOException)         { Thread.Sleep(1000); }
+                            catch (TimeoutException)    { Thread.Sleep(1000); }
+                        } while ((mClientPipe == null || !mClientPipe.IsConnected) && !Exit);
                     }
 
                     var Formatter = new BinaryFormatter();
@@ -64,7 +63,7 @@ namespace ModExtenderCommunication
                                 if (mSendCommands.Count > 0) SendMessage = mSendCommands.Dequeue();
                             }
 
-                            if (SendMessage != null && mClientPipe != null && mClientPipe.IsConnected)
+                            if (SendMessage != null && mClientPipe != null && mClientPipe.IsConnected && !Exit)
                             {
                                 using (var MemBuffer = new MemoryStream())
                                 {
@@ -100,16 +99,18 @@ namespace ModExtenderCommunication
                     catch (ThreadAbortException) { }
                     catch
                     {
-                        if(mCommThread.ThreadState != ThreadState.AbortRequested) Thread.Sleep(10000);
+                        if(!Exit) Thread.Sleep(10000);
                     }
                 }
                 catch (ThreadAbortException) { }
                 catch (Exception Error)
                 {
                     log?.Invoke($"MainError {PipeName} Connected:{mClientPipe?.IsConnected} Reason: {Error.Message}");
-                    if(mCommThread.ThreadState != ThreadState.AbortRequested) Thread.Sleep(10000);
+                    if(!Exit) Thread.Sleep(10000);
                 }
             }
+
+            if (mClientPipe != null && mClientPipe.IsConnected) mClientPipe.Dispose();
         }
 
 
@@ -127,8 +128,8 @@ namespace ModExtenderCommunication
         {
             try
             {
-                mCommThread?.Abort();
-                mCommThread = null;
+                Exit = true;
+                lock (mSendCommands) Monitor.PulseAll(mSendCommands);
             }
             catch (Exception Error)
             {

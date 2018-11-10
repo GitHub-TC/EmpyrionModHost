@@ -11,7 +11,6 @@ namespace EmpyrionModHost
         public ServerMessagePipe FromEmpyrion { get; private set; }
         public Dictionary<Type, Action<object>> InServerMessageHandler { get; }
         public ModDispatcher Dispatcher { get; private set; }
-        public event EventHandler GameExit;
 
         public ModHostDLL()
         {
@@ -30,7 +29,6 @@ namespace EmpyrionModHost
 
             FromEmpyrion.Callback = Msg => { if (InServerMessageHandler.TryGetValue(Msg.GetType(), out Action<object> Handler)) Handler(Msg); };
 
-            Dispatcher.GameExit += (S, A) => GameExit?.Invoke(this, null);
             Dispatcher.Game_Start(this);
         }
 

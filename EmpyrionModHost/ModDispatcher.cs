@@ -29,7 +29,7 @@ namespace EmpyrionModHost
         public void Game_Exit()
         {
             Parallel.ForEach(mModInstance, M => M.Game_Exit());
-            GameExit?.Invoke(this, null);
+            GameExit(this, null);
         }
 
         public void Game_Start(ModGameAPI dediAPI)

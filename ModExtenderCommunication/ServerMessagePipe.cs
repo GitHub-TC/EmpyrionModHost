@@ -16,6 +16,8 @@ namespace ModExtenderCommunication
         public Action<string> log { get; set; }
         public string PipeName { get; }
         public Action<object> Callback { get; set; }
+        public bool Exit { get; private set; }
+
         public ServerMessagePipe(string aPipeName)
         {
             PipeName = aPipeName;
@@ -26,7 +28,7 @@ namespace ModExtenderCommunication
         private void ServerCommunicationLoop()
         {
             var ShownErrors = new List<string>();
-            while (mServerCommThread.ThreadState != ThreadState.AbortRequested)
+            while (!Exit)
             {
                 try
                 {
@@ -50,10 +52,10 @@ namespace ModExtenderCommunication
             {
                 mServerPipe.WaitForConnection();
                 log?.Invoke($"ServerPipe: {PipeName} connected");
-                while (mServerPipe.IsConnected && mServerCommThread.ThreadState != ThreadState.AbortRequested)
+                while (mServerPipe.IsConnected && !Exit)
                 {
                     var Message = ReadNextMessage();
-                    Callback?.Invoke(Message);
+                    if(Message != null) Callback?.Invoke(Message);
                 }
             }
         }
@@ -70,13 +72,15 @@ namespace ModExtenderCommunication
 
                 if (mMessageBuffer.Length < Size) mMessageBuffer = new byte[Size];
 
+                if (Exit || Size < 0) return null;
+
                 do
                 {
                     var BytesRead = mServerPipe.Read(mMessageBuffer, 0, Size);
                     MessageLength += BytesRead;
                     MemBuffer.Write(mMessageBuffer, 0, BytesRead);
                 }
-                while (MessageLength < Size && mServerCommThread.ThreadState != ThreadState.AbortRequested);
+                while (MessageLength < Size && !Exit);
 
                 if (MessageLength == 0) return null;
 
@@ -97,20 +101,21 @@ namespace ModExtenderCommunication
         {
             try
             {
-                mServerCommThread?.Abort();
+                Exit = true;
 
-                new Thread(() => {
+                if (!mServerPipe.IsConnected)
+                {
                     try
                     {
-                        var ClientPipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out, PipeOptions.Asynchronous);
-                        ClientPipe.Connect(1);
-                        ClientPipe.Close();
+                        using (var ClientPipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out, PipeOptions.Asynchronous))
+                        {
+                            ClientPipe.Connect(1);
+                        }
                     }
                     catch { }
-                }).Start();
+                }
 
                 mServerCommThread = null;
-                mServerPipe?.Close();mServerPipe = null;
             }
             catch (Exception Error)
             {

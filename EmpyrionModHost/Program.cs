@@ -8,11 +8,14 @@ namespace EmpyrionModHost
     {
         static void Main(string[] args)
         {
-            var Exit = new AutoResetEvent(false);
             var Host = new ModHostDLL();
-            Host.GameExit += (S, A) => Exit.Set();
             Host.InitComunicationChannels();
+
+            var Exit = new AutoResetEvent(false);
+            Host.Dispatcher.GameExit += (S, A) => Exit.Set();
             Exit.WaitOne();
+
+            Environment.Exit(Environment.ExitCode);
         }
 
     }
