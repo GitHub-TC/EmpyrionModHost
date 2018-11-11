@@ -65,14 +65,14 @@ namespace ModExtenderCommunication
             using (var MemBuffer = new MemoryStream())
             {
                 var MessageLength = 0;
-                var Size = mServerPipe.ReadByte();
-                Size += mServerPipe.ReadByte() << 8;
-                Size += mServerPipe.ReadByte() << 16;
-                Size += mServerPipe.ReadByte() << 24;
+                var Size = mServerPipe.ReadByte();      if (!mServerPipe.IsConnected || Exit) return null;
+                Size += mServerPipe.ReadByte() << 8;    if (!mServerPipe.IsConnected || Exit) return null;
+                Size += mServerPipe.ReadByte() << 16;   if (!mServerPipe.IsConnected || Exit) return null;
+                Size += mServerPipe.ReadByte() << 24;   if (!mServerPipe.IsConnected || Exit) return null;
 
                 if (mMessageBuffer.Length < Size) mMessageBuffer = new byte[Size];
 
-                if (Exit || Size < 0) return null;
+                if (Size < 0) return null;
 
                 do
                 {
@@ -114,8 +114,6 @@ namespace ModExtenderCommunication
                     }
                     catch { }
                 }
-
-                mServerCommThread = null;
             }
             catch (Exception Error)
             {

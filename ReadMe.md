@@ -15,9 +15,6 @@ Entkoppeln der MOD.DLLs um diese:
 	heruntergefahren und nicht (automatisch) erneut gestartet.
 * Host: "DllNames.txt" Pfade zu den MOD.DLLs welche geladen werden sollen
 
-# Bekannte Fehler
-Das wieder Starten des Hostprozesses (durch das entfernen der "stop.txt" Datei), bei einem laufenden Empyrion, lässt diesen abstürzen ?!?!
-
 # English version
 
 # Empyrion ModLoader / Client / Host
@@ -37,5 +34,3 @@ Decoupling the MOD.DLLs by:
 Shut down and not (automatically) restarted.
 * Host: "DllNames.txt" paths to the MOD.DLLs which should be loaded
 
-# Known bugs
-Restarting the host process (by removing the "stop.txt" file) while running Empyrion causes it to crash?!?!

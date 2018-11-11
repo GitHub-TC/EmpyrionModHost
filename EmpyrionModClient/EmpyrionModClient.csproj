@@ -61,6 +61,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy "$(TargetDir)*.*" "C:\steamcmd\empyrion\Content\Mods\ModLoader\Client\*.*" /Y</PostBuildEvent>
+    <PostBuildEvent>xcopy "$(TargetDir)*.*" "C:\steamcmd\empyrion\Content\Mods\ModLoader\Client\*.*" /Y
+xcopy "$(TargetDir)*.*" "$(SolutionDir)publish\ModLoader\Client\*.*" /Y
+del /Q "$(SolutionDir)publish\ModLoader\Client\*.pdb"</PostBuildEvent>
   </PropertyGroup>
 </Project>
