@@ -90,6 +90,9 @@ namespace EmpyrionModClient
                 ConfigFilename = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), "Configuration.xml")
             };
             CurrentConfig.Load();
+            CurrentConfig.Current.EmpyrionToModPipeName = string.Format(CurrentConfig.Current.EmpyrionToModPipeName, Guid.NewGuid().ToString("N"));
+            CurrentConfig.Current.ModToEmpyrionPipeName = string.Format(CurrentConfig.Current.ModToEmpyrionPipeName, Guid.NewGuid().ToString("N"));
+            CurrentConfig.Save();
 
             GameAPI.Console_Write($"ModClientDll (CurrentDir:{Directory.GetCurrentDirectory()}): Config:{CurrentConfig.ConfigFilename}");
 
@@ -98,22 +101,9 @@ namespace EmpyrionModClient
                 { typeof(ClientHostComData    ), M => HandleClientHostCommunication ((ClientHostComData)M) }
             };
 
-            try
-            {
-                CurrentConfig.Current.EmpyrionToModPipeName = string.Format(CurrentConfig.Current.EmpyrionToModPipeName, Guid.NewGuid().ToString("N"));
-                CurrentConfig.Current.ModToEmpyrionPipeName = string.Format(CurrentConfig.Current.ModToEmpyrionPipeName, Guid.NewGuid().ToString("N"));
+            new Thread(() => { while (!Exit) { Thread.Sleep(1000); CheckHostProcess(); }}).Start();
 
-                CheckHostProcess(true);
-
-                new Thread(() => { while (!Exit) { Thread.Sleep(1000); CheckHostProcess(false); }}).Start();
-
-                CurrentConfig.Save();
-                GameAPI.Console_Write($"ModClientDll: started");
-            }
-            catch (System.Exception Error)
-            {
-                GameAPI.Console_Write($"ModClientDll: {Error.Message}");
-            }
+            GameAPI.Console_Write($"ModClientDll: started");
         }
 
         private void StartHostProcess()
@@ -174,48 +164,64 @@ namespace EmpyrionModClient
             }
         }
 
-        void CheckHostProcess(bool aFoceStart)
+        void CheckHostProcess()
         {
             if (Exit) return;
 
             if (ExistsStopFile())
             {
-                try {
+                try
+                {
                     if (mHostProcess != null && !mHostProcess.HasExited)
                     {
                         GameAPI.Console_Write($"ModClientDll: stop.txt found");
+
                         OutServer?.SendMessage(new ClientHostComData() { Command = ClientHostCommand.Game_Exit });
                         Thread.Sleep(1000);
 
-                        InServer ?.Close(); InServer = null;
+                        InServer ?.Close();
                         OutServer?.Close();
+
+                        GameAPI.Console_Write($"ModClientDll: stopped");
                     }
-                } catch { }
+                }
+                catch { }
 
                 return;
             }
 
-            if (!aFoceStart)
-            {
-                if (CurrentConfig.Current.AutostartModHostAfterNSeconds == 0 || !CurrentConfig.Current.AutostartModHost) return;
-                try { if (mHostProcess != null && !mHostProcess.HasExited) return; } catch { }
+            if (CurrentConfig.Current.AutostartModHostAfterNSeconds == 0 || !CurrentConfig.Current.AutostartModHost) return;
+            try { if (mHostProcess != null && !mHostProcess.HasExited) return; } catch { }
 
-                if (!mHostProcessAlive.HasValue) mHostProcessAlive = DateTime.Now;
-                if ((DateTime.Now - mHostProcessAlive.Value).TotalSeconds <= CurrentConfig.Current.AutostartModHostAfterNSeconds) return;
-            }
+            if (!mHostProcessAlive.HasValue) mHostProcessAlive = DateTime.Now;
+            if ((DateTime.Now - mHostProcessAlive.Value).TotalSeconds <= CurrentConfig.Current.AutostartModHostAfterNSeconds) return;
 
             mHostProcessAlive = null;
 
             StartModToEmpyrionPipe();
             StartHostProcess();
+            StartEmpyrionToModPipe();
+        }
 
-            OutServer = new ClientMessagePipe(CurrentConfig.Current.EmpyrionToModPipeName) { log = GameAPI.Console_Write };
+        private void StartEmpyrionToModPipe()
+        {
+            try
+            {
+                try { OutServer?.Close(); } catch { }
+                Thread.Sleep(1000);
+                OutServer = new ClientMessagePipe(CurrentConfig.Current.EmpyrionToModPipeName) { log = GameAPI.Console_Write };
+            }
+            catch (Exception Error)
+            {
+                GameAPI.Console_Write($"ModClientDll: ClientMessagePipe '{CurrentConfig.Current.EmpyrionToModPipeName} -> {Error}'");
+            }
         }
 
         private void StartModToEmpyrionPipe()
         {
             GameAPI.Console_Write($"StartModToEmpyrionPipe: start {CurrentConfig.Current.ModToEmpyrionPipeName}");
             try { InServer?.Close(); } catch { }
+            Thread.Sleep(1000);
 
             InServer = new ServerMessagePipe(CurrentConfig.Current.ModToEmpyrionPipeName) { log = GameAPI.Console_Write };
             InServer.Callback = Msg => {
