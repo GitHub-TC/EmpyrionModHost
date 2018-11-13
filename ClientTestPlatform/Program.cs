@@ -1,9 +1,6 @@
 ﻿using Eleon.Modding;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ClientTestPlatform
 {
@@ -15,6 +12,7 @@ namespace ClientTestPlatform
             var gameAPIMockup = new GameAPIMockup();
 
             Client.Game_Start(gameAPIMockup);
+            Client.InServer.Callback = O => Console.WriteLine($"Receive{O}");
 
             while (Console.ReadKey().KeyChar == ' ')
             {

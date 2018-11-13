@@ -1,6 +1,8 @@
 ﻿using Eleon.Modding;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 
@@ -10,13 +12,18 @@ namespace ModExtenderCommunication
     [Serializable]
     public class EmpyrionGameEventData
     {
+        public static Dictionary<string, Type> EleonModdingTypes = AppDomain.CurrentDomain.GetAssemblies()
+                       .SelectMany(t => t.GetTypes())
+                       .Where(t => t.Namespace == "Eleon.Modding")
+                       .ToDictionary(t => t.FullName);
+
         public CmdId eventId;
         public ushort seqNr;
-        [NonSerialized]
-        public object data;
+        //[NonSerialized]
+        //public object data;
 
         byte[] serializedData;
-        Type serializedDataType;
+        string serializedDataType;
 
         class ProtoBufCall<T>
         {
@@ -24,39 +31,58 @@ namespace ModExtenderCommunication
             public T Deserialize(Stream aStream) { return ProtoBuf.Serializer.Deserialize<T>(aStream); }
         }
 
-        [OnSerializing]
-        internal void OnSerializingMethod(StreamingContext context)
+        public void SetEmyprionObject(object data)
         {
             if (data == null) return;
 
-            using (var MemBuffer = new MemoryStream())
+            try
             {
-                Type TypedProtoBufCall = typeof(ProtoBufCall<>);
-                serializedDataType = data.GetType();
-                TypedProtoBufCall = TypedProtoBufCall.MakeGenericType(new[] { serializedDataType });
+                using (var MemBuffer = new MemoryStream())
+                {
+                    Type TypedProtoBufCall = typeof(ProtoBufCall<>);
+                    serializedDataType = data.GetType().Name;
+                    TypedProtoBufCall = TypedProtoBufCall.MakeGenericType(new[] { data.GetType() });
 
-                object ProtoBufCallInstance = Activator.CreateInstance(TypedProtoBufCall);
-                MethodInfo MI = TypedProtoBufCall.GetMethod("Serialize");
-                MI.Invoke(ProtoBufCallInstance, new[] { MemBuffer, data });
+                    object ProtoBufCallInstance = Activator.CreateInstance(TypedProtoBufCall);
+                    MethodInfo MI = TypedProtoBufCall.GetMethod("Serialize");
+                    MI.Invoke(ProtoBufCallInstance, new[] { MemBuffer, data });
 
-                MemBuffer.Seek(0, SeekOrigin.Begin);
-                serializedData = MemBuffer.ToArray();
+                    MemBuffer.Seek(0, SeekOrigin.Begin);
+                    serializedData = MemBuffer.ToArray();
+                }
+            }
+            catch (Exception Error)
+            {
+                Console.WriteLine($"OnSerializingMethod:{Error}");
             }
         }
 
-        [OnDeserialized]
-        internal void OnDeserializedMethod(StreamingContext context)
+        public object GetEmpyrionObject()
         {
-            if (serializedData == null) return;
+            if (serializedData == null) return null;
 
-            using (var MemBuffer = new MemoryStream(serializedData))
+            try
             {
-                Type TypedProtoBufCall = typeof(ProtoBufCall<>);
-                TypedProtoBufCall = TypedProtoBufCall.MakeGenericType(new[] { serializedDataType });
+                using (var MemBuffer = new MemoryStream(serializedData))
+                {
+                    if (!EleonModdingTypes.TryGetValue(serializedDataType, out Type EleonType))
+                    {
+                        Console.WriteLine($"GetEmpyrionObject:?:{serializedDataType}");
+                        return null;
+                    }
 
-                object ProtoBufCallInstance = Activator.CreateInstance(TypedProtoBufCall);
-                MethodInfo MI = TypedProtoBufCall.GetMethod("Deserialize");
-                data = MI.Invoke(ProtoBufCallInstance, new[] { MemBuffer });
+                    Type TypedProtoBufCall = typeof(ProtoBufCall<>);
+                    TypedProtoBufCall = TypedProtoBufCall.MakeGenericType(new[] { EleonType });
+
+                    object ProtoBufCallInstance = Activator.CreateInstance(TypedProtoBufCall);
+                    MethodInfo MI = TypedProtoBufCall.GetMethod("Deserialize");
+                    return MI.Invoke(ProtoBufCallInstance, new[] { MemBuffer });
+                }
+            }
+            catch (Exception Error)
+            {
+                Console.WriteLine($"OnDeserializedMethod:{Error}");
+                return null;
             }
         }
     }

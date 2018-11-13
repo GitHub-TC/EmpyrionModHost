@@ -8,7 +8,8 @@ namespace ModExtenderCommunication
         RestartHost,
         Game_Update,
         Console_Write,
-        ExposeShutdownHost
+        ExposeShutdownHost,
+        Ping
     }
 
     [Serializable]

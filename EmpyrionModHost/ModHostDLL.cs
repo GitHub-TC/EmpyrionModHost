@@ -50,8 +50,9 @@ namespace EmpyrionModHost
 
         private void HandleGameEvent(EmpyrionGameEventData aMsg)
         {
-            Console.WriteLine($"Game_Event:{aMsg.eventId}#{aMsg.seqNr} = {aMsg.data}");
-            Dispatcher?.Game_Event(aMsg.eventId, aMsg.seqNr, aMsg.data);
+            var msg = aMsg.GetEmpyrionObject();
+            Console.WriteLine($"Game_Event:{aMsg.eventId}#{aMsg.seqNr} = {msg}");
+            Dispatcher?.Game_Event(aMsg.eventId, aMsg.seqNr, msg);
         }
 
         public void Console_Write(string aMsg)
@@ -68,7 +69,9 @@ namespace EmpyrionModHost
         public bool Game_Request(CmdId reqId, ushort seqNr, object data)
         {
             Console.WriteLine($"Game_Request:{reqId}#{seqNr} = {data}");
-            ToEmpyrion.SendMessage(new EmpyrionGameEventData() { eventId = reqId, seqNr = seqNr, data = data });
+            var msg = new EmpyrionGameEventData() { eventId = reqId, seqNr = seqNr};
+            msg.GetEmpyrionObject();
+            ToEmpyrion.SendMessage(msg);
             return true;
         }
     }

@@ -36,7 +36,6 @@ namespace EmpyrionModClient
         Dictionary<Type, Action<object>> InServerMessageHandler;
 
         ConfigurationManager<Configuration> CurrentConfig;
-        private Thread mGame_Update_CheckHostProcess;
 
         public void Game_Event(CmdId eventId, ushort seqNr, object data)
         {
@@ -44,9 +43,9 @@ namespace EmpyrionModClient
 
             try
             {
-                //GameAPI.Console_Write($"ModClientDll: eventId:{eventId} seqNr:{seqNr} data:{data}");
-                OutServer.SendMessage(new EmpyrionGameEventData() { eventId = eventId, seqNr = seqNr, data = data });
-                //GameAPI.Console_Write($"ModClientDll: send");
+                var msg = new EmpyrionGameEventData() { eventId = eventId, seqNr = seqNr};
+                msg.SetEmyprionObject(data);
+                OutServer.SendMessage(msg);
             }
             catch (System.Exception Error)
             {
@@ -99,6 +98,12 @@ namespace EmpyrionModClient
             InServerMessageHandler = new Dictionary<Type, Action<object>> {
                 { typeof(EmpyrionGameEventData), M => HandleGameEvent               ((EmpyrionGameEventData)M) },
                 { typeof(ClientHostComData    ), M => HandleClientHostCommunication ((ClientHostComData)M) }
+            };
+
+            OutServer = new ClientMessagePipe(CurrentConfig.Current.EmpyrionToModPipeName) { log = GameAPI.Console_Write };
+            InServer  = new ServerMessagePipe(CurrentConfig.Current.ModToEmpyrionPipeName) { log = GameAPI.Console_Write };
+            InServer.Callback = Msg => {
+                if (InServerMessageHandler.TryGetValue(Msg.GetType(), out Action<object> Handler)) Handler(Msg);
             };
 
             new Thread(() => { while (!Exit) { Thread.Sleep(1000); CheckHostProcess(); }}).Start();
@@ -179,9 +184,6 @@ namespace EmpyrionModClient
                         OutServer?.SendMessage(new ClientHostComData() { Command = ClientHostCommand.Game_Exit });
                         Thread.Sleep(1000);
 
-                        InServer ?.Close();
-                        OutServer?.Close();
-
                         GameAPI.Console_Write($"ModClientDll: stopped");
                     }
                 }
@@ -198,37 +200,7 @@ namespace EmpyrionModClient
 
             mHostProcessAlive = null;
 
-            StartModToEmpyrionPipe();
             StartHostProcess();
-            StartEmpyrionToModPipe();
-        }
-
-        private void StartEmpyrionToModPipe()
-        {
-            try
-            {
-                try { OutServer?.Close(); } catch { }
-                Thread.Sleep(1000);
-                OutServer = new ClientMessagePipe(CurrentConfig.Current.EmpyrionToModPipeName) { log = GameAPI.Console_Write };
-            }
-            catch (Exception Error)
-            {
-                GameAPI.Console_Write($"ModClientDll: ClientMessagePipe '{CurrentConfig.Current.EmpyrionToModPipeName} -> {Error}'");
-            }
-        }
-
-        private void StartModToEmpyrionPipe()
-        {
-            GameAPI.Console_Write($"StartModToEmpyrionPipe: start {CurrentConfig.Current.ModToEmpyrionPipeName}");
-            try { InServer?.Close(); } catch { }
-            Thread.Sleep(1000);
-
-            InServer = new ServerMessagePipe(CurrentConfig.Current.ModToEmpyrionPipeName) { log = GameAPI.Console_Write };
-            InServer.Callback = Msg => {
-                if (InServerMessageHandler.TryGetValue(Msg.GetType(), out Action<object> Handler)) Handler(Msg);
-            };
-
-            GameAPI.Console_Write($"StartModToEmpyrionPipe: startet {CurrentConfig.Current.ModToEmpyrionPipeName}");
         }
 
         private void HandleClientHostCommunication(ClientHostComData aMsg)
@@ -243,7 +215,8 @@ namespace EmpyrionModClient
 
         private void HandleGameEvent(EmpyrionGameEventData TypedMsg)
         {
-            GameAPI.Game_Request(TypedMsg.eventId, TypedMsg.seqNr, TypedMsg.data);
+            var msg = TypedMsg.GetEmpyrionObject();
+            GameAPI.Game_Request(TypedMsg.eventId, TypedMsg.seqNr, msg);
         }
 
         public void Game_Update()

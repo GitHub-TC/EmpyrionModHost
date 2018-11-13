@@ -58,6 +58,10 @@
       <Project>{cc76932d-33ef-4a9d-afde-4954afe57676}</Project>
       <Name>EmpyrionModClient</Name>
     </ProjectReference>
+    <ProjectReference Include="..\ModExtenderCommunication\ModExtenderCommunication.csproj">
+      <Project>{C356799B-60CF-4505-A492-D6F70891BCA4}</Project>
+      <Name>ModExtenderCommunication</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="bin\Configuration.xml" />
