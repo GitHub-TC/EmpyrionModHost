@@ -43,7 +43,7 @@ namespace ModExtenderCommunication
                     if (!ShownErrors.Contains(Error.Message))
                     {
                         ShownErrors.Add(Error.Message);
-                        log?.Invoke($"Failed ExecServerCommunication. {PipeName} Reason: " + Error.Message);
+                        log?.Invoke($"Failed ExecServerCommunication. {PipeName} Reason: " + Error);
                     }
 
                     if (!Exit) Thread.Sleep(1000);
@@ -53,6 +53,7 @@ namespace ModExtenderCommunication
 
         private void ExecServerCommunication()
         {
+            mLastPing = null;
             using (mServer = new CircularBuffer(PipeName))
             {
                 long bufferSize = mServer.NodeBufferSize;
@@ -73,11 +74,7 @@ namespace ModExtenderCommunication
                     if (!mLastPing.HasValue || Message != null) mLastPing = DateTime.Now;
                     if (Message != null) Callback?.Invoke(Message);
 
-                    if ((DateTime.Now - mLastPing.Value).TotalSeconds > 5)
-                    {
-                        mLastPing = null;
-                        return;
-                    }
+                    if ((DateTime.Now - mLastPing.Value).TotalSeconds > 5) return;
                 }
             }
         }

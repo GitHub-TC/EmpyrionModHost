@@ -23,12 +23,12 @@ namespace EmpyrionModHost
 
         public void Game_Event(CmdId eventId, ushort seqNr, object data)
         {
-            Parallel.ForEach(mModInstance, M => M.Game_Event(eventId, seqNr, data));
+            Parallel.ForEach(mModInstance, M => SaveApiCall(() => M.Game_Event(eventId, seqNr, data), M, $"CmdId:{eventId} seqNr:{seqNr} data:{data}"));
         }
 
         public void Game_Exit()
         {
-            Parallel.ForEach(mModInstance, M => M.Game_Exit());
+            Parallel.ForEach(mModInstance, M => SaveApiCall(() => M.Game_Exit(), M, "Game_Exit"));
             GameExit(this, null);
         }
 
@@ -47,7 +47,7 @@ namespace EmpyrionModHost
 
                 Array.ForEach(mAssemblyFileNames, LoadAssembly);
 
-                Parallel.ForEach(mModInstance, M => M.Game_Start(GameAPI));
+                Parallel.ForEach(mModInstance, M => SaveApiCall(() => M.Game_Start(GameAPI), M, "Game_Start"));
 
                 GameAPI.Console_Write($"ModDispatcher(finish:{mModInstance.Count}): {mDllNamesFileName}");
             }
@@ -87,7 +87,19 @@ namespace EmpyrionModHost
 
         public void Game_Update()
         {
-            Parallel.ForEach(mModInstance, M => M.Game_Update());
+            Parallel.ForEach(mModInstance, M => SaveApiCall(() => M.Game_Update(), M, "Game_Update"));
+        }
+
+        private void SaveApiCall(Action aCall, ModInterface aMod, string aErrorInfo)
+        {
+            try
+            {
+                aCall();
+            }
+            catch (Exception Error)
+            {
+                GameAPI.Console_Write($"Exception [{aMod}] {aErrorInfo} => {Error}");
+            }
         }
     }
 }

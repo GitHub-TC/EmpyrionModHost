@@ -12,15 +12,21 @@ namespace ModExtenderCommunication
     [Serializable]
     public class EmpyrionGameEventData
     {
-        public static Dictionary<string, Type> EleonModdingTypes = AppDomain.CurrentDomain.GetAssemblies()
+        private static Dictionary<string, Type> _mEleonModdingTypes;
+
+        public static Dictionary<string, Type> EleonModdingTypes {
+            get {
+                if(_mEleonModdingTypes == null) _mEleonModdingTypes = AppDomain.CurrentDomain.GetAssemblies()
                        .SelectMany(t => t.GetTypes())
                        .Where(t => t.Namespace == "Eleon.Modding")
                        .ToDictionary(t => t.FullName);
 
+                return _mEleonModdingTypes;
+            }
+        }
+
         public CmdId eventId;
         public ushort seqNr;
-        //[NonSerialized]
-        //public object data;
 
         byte[] serializedData;
         string serializedDataType;
@@ -40,7 +46,7 @@ namespace ModExtenderCommunication
                 using (var MemBuffer = new MemoryStream())
                 {
                     Type TypedProtoBufCall = typeof(ProtoBufCall<>);
-                    serializedDataType = data.GetType().Name;
+                    serializedDataType = data.GetType().FullName;
                     TypedProtoBufCall = TypedProtoBufCall.MakeGenericType(new[] { data.GetType() });
 
                     object ProtoBufCallInstance = Activator.CreateInstance(TypedProtoBufCall);
