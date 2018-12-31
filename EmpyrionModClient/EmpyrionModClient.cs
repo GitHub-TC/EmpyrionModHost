@@ -44,7 +44,7 @@ namespace EmpyrionModClient
             try
             {
                 var msg = new EmpyrionGameEventData() { eventId = eventId, seqNr = seqNr};
-                msg.SetEmyprionObject(data);
+                msg.SetEmpyrionObject(data);
                 OutServer.SendMessage(msg);
             }
             catch (System.Exception Error)

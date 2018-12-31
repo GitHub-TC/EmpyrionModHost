@@ -70,7 +70,7 @@ namespace EmpyrionModHost
         {
             //Console.WriteLine($"Game_Request:{reqId}#{seqNr} = {data}");
             var msg = new EmpyrionGameEventData() { eventId = reqId, seqNr = seqNr};
-            msg.SetEmyprionObject(data);
+            msg.SetEmpyrionObject(data);
             ToEmpyrion.SendMessage(msg);
             return true;
         }

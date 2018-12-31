@@ -12,7 +12,6 @@ namespace ModExtenderCommunication
     {
         CircularBuffer mServer;
         Thread mServerCommThread;
-        BinaryReader mServerBinReader;
         private byte[] mDataBuffer;
         DateTime? mLastPing;
 

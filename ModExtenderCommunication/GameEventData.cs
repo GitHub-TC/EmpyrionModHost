@@ -37,7 +37,7 @@ namespace ModExtenderCommunication
             public T Deserialize(Stream aStream) { return ProtoBuf.Serializer.Deserialize<T>(aStream); }
         }
 
-        public void SetEmyprionObject(object data)
+        public void SetEmpyrionObject(object data)
         {
             if (data == null) return;
 
