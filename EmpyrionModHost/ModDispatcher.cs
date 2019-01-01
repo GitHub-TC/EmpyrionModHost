@@ -19,6 +19,8 @@ namespace EmpyrionModHost
         public ModGameAPI GameAPI { get; set; }
         string[] mAssemblyFileNames { get; set; }
         List<ModInterface> mModInstance { get; set; } = new List<ModInterface>();
+        public string CurrentModFile { get; private set; }
+
         public event EventHandler GameExit;
 
         public void Game_Event(CmdId eventId, ushort seqNr, object data)
@@ -59,12 +61,16 @@ namespace EmpyrionModHost
 
         private void LoadAssembly(string aFileName)
         {
+            CurrentModFile = aFileName;
+            AppDomain.CurrentDomain.AssemblyResolve += ModResolveEventHandler;
+
             try
             {
                 var ModFilename = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), aFileName);
 
                 GameAPI.Console_Write($"ModDispatcher: load {ModFilename}");
-                var Mod = Assembly.LoadFile(ModFilename);
+                Assembly Mod = TryLoadAssembly(ModFilename);
+
                 var ModType = Mod.GetTypes().Where(T => T.GetInterfaces().Contains(typeof(ModInterface))).FirstOrDefault();
                 if (ModType != null)
                 {
@@ -83,6 +89,43 @@ namespace EmpyrionModHost
             {
                 GameAPI.Console_Write($"ModDispatcher: {aFileName} -> {Error}");
             }
+
+            AppDomain.CurrentDomain.AssemblyResolve -= ModResolveEventHandler;
+        }
+
+        private Assembly TryLoadAssembly(string aAssembly)
+        {
+            try{
+                var Result = Assembly.LoadFile(aAssembly);
+                if (Result == null) return Result;
+            }
+            catch {}
+
+            string CurrentDir = null;
+            try
+            {
+                CurrentDir = Directory.GetCurrentDirectory();
+                GameAPI.Console_Write($"Try load within: {CurrentDir} -> {Path.GetDirectoryName(aAssembly)}");
+                Directory.SetCurrentDirectory(Path.GetDirectoryName(aAssembly));
+                return Assembly.LoadFile(aAssembly);
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(CurrentDir);
+            }
+        }
+
+        private Assembly ModResolveEventHandler(object aSender, ResolveEventArgs aArgs)
+        {
+            var Delimitter = aArgs.Name.IndexOf(',');
+            var ModPath = Path.Combine(
+                Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location),
+                Path.GetDirectoryName(CurrentModFile), 
+                (Delimitter > 0 ? aArgs.Name.Substring(0, Delimitter) : aArgs.Name) + ".dll");
+            GameAPI.Console_Write($"ModResolveEventHandler: {ModPath}");
+            if (File.Exists(ModPath)) return Assembly.LoadFrom(ModPath);
+
+            throw new FileNotFoundException("Assembly not found", ModPath);
         }
 
         public void Game_Update()

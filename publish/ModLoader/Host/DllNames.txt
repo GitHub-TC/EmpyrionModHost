@@ -1,10 +1,7 @@
-# - pro Zeile ein Pfad zu einer DLL Moddatei
-# - der Pfad kann relativ zu diesem Verzeichnis angegeben werden
-# - Leerzeilen sind erlaubt
-# - Kommentarzeilen beginnnen mit einen #
 #..\MODs\EmpyrionBaseAlign\EmpyrionBaseAlign.dll
 #..\MODs\EmpyrionChatAutoTranslate\EmpyrionChatAutoTranslate.dll
 #..\MODs\EmpyrionPassenger\EmpyrionPassenger.dll
 #..\MODs\EmpyrionStructureCleanUp\EmpyrionStructureCleanUp.dll
 ..\MODs\EmpyrionTeleporter\EmpyrionTeleporter.dll
 ..\MODs\EmpyrionXChange\EmpyrionXChange.dll
+..\MODs\EmpyrionNCMRModHost\EmpyrionNCMRModHost.dll
