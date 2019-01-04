@@ -89,7 +89,7 @@ namespace ModLoader
             }
             catch (Exception Error)
             {
-                mGameAPI.Console_Write($"LoadMod: {aFileName} CurrentDit:{Directory.GetCurrentDirectory()} -> {Error}");
+                mGameAPI.Console_Write($"LoadMod: {aFileName} CurrentDir:{Directory.GetCurrentDirectory()} -> {Error}");
             }
         }
 
