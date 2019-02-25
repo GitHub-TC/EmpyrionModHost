@@ -29,13 +29,20 @@ namespace EmpyrionModClient
         public ServerMessagePipe InServer { get; private set; }
         public Process mHostProcess { get; private set; }
         public DateTime? mHostProcessAlive { get; private set; }
-        public static string ProgramPath { get; private set; } = Directory.GetCurrentDirectory();
+        public static string ProgramPath { get; private set; } = GetDirWith(Directory.GetCurrentDirectory(), "BuildNumber.txt");
         public bool Exit { get; private set; }
         public bool ExposeShutdownHost { get; private set; }
 
         Dictionary<Type, Action<object>> InServerMessageHandler;
 
         ConfigurationManager<Configuration> CurrentConfig;
+
+        private static string GetDirWith(string aTestDir, string aTestFile)
+        {
+            return File.Exists(Path.Combine(aTestDir, aTestFile))
+                ? aTestDir
+                : GetDirWith(Path.GetDirectoryName(aTestDir), aTestFile);
+        }
 
         public void Game_Event(CmdId eventId, ushort seqNr, object data)
         {

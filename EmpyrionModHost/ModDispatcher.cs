@@ -21,9 +21,16 @@ namespace EmpyrionModHost
         List<ModInterface> mModInstance { get; set; } = new List<ModInterface>();
         public string CurrentModFile { get; private set; }
 
-        public static string ProgramPath { get; private set; } = Directory.GetCurrentDirectory();
+        public static string ProgramPath { get; private set; } = GetDirWith(Directory.GetCurrentDirectory(), "BuildNumber.txt");
 
         public event EventHandler GameExit;
+
+        private static string GetDirWith(string aTestDir, string aTestFile)
+        {
+            return File.Exists(Path.Combine(aTestDir, aTestFile))
+                ? aTestDir
+                : GetDirWith(Path.GetDirectoryName(aTestDir), aTestFile);
+        }
 
         public void Game_Event(CmdId eventId, ushort seqNr, object data)
         {
@@ -137,7 +144,7 @@ namespace EmpyrionModHost
             GameAPI.Console_Write($"ModResolveEventHandler1: {ModPath}");
             if (File.Exists(ModPath)) return Assembly.LoadFrom(ModPath);
 
-            ModPath = Path.Combine(ProgramPath, @"EmpyrionDedicated_Data\Managed", Path.GetFileName(ModPath));
+            ModPath = Path.Combine(ProgramPath, @"DedicatedServer\EmpyrionDedicated_Data\Managed", Path.GetFileName(ModPath));
             GameAPI.Console_Write($"ModResolveEventHandler2: {ModPath}");
             if (File.Exists(ModPath)) return Assembly.LoadFrom(ModPath);
 
