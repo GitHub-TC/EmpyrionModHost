@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EmpyrionModHost
@@ -34,12 +35,12 @@ namespace EmpyrionModHost
 
         public void Game_Event(CmdId eventId, ushort seqNr, object data)
         {
-            Parallel.ForEach(mModInstance, M => SaveApiCall(() => M.Game_Event(eventId, seqNr, data), M, $"CmdId:{eventId} seqNr:{seqNr} data:{data}"));
+            Parallel.ForEach(mModInstance, async M => await SaveApiCall(() => M.Game_Event(eventId, seqNr, data), M, $"CmdId:{eventId} seqNr:{seqNr} data:{data}"));
         }
 
         public void Game_Exit()
         {
-            Parallel.ForEach(mModInstance, M => SaveApiCall(() => M.Game_Exit(), M, "Game_Exit"));
+            Parallel.ForEach(mModInstance, async M => await SaveApiCall(() => M.Game_Exit(), M, "Game_Exit"));
             GameExit(this, null);
         }
 
@@ -61,7 +62,7 @@ namespace EmpyrionModHost
 
                 Directory.SetCurrentDirectory(ProgramPath);
 
-                try{ Parallel.ForEach(mModInstance, M => SaveApiCall(() => M.Game_Start(GameAPI), M, "Game_Start")); }
+                try{ Parallel.ForEach(mModInstance, async M => await SaveApiCall(() => M.Game_Start(GameAPI), M, "Game_Start")); }
                 finally{ Directory.SetCurrentDirectory(CurrentDirectory); }
 
                 GameAPI.Console_Write($"ModDispatcher(finish:{mModInstance.Count}): {mDllNamesFileName}");
@@ -93,7 +94,21 @@ namespace EmpyrionModHost
                     mModInstance.Add(ModInstance);
                     GameAPI.Console_Write($"ModDispatcher: loaded {ModFilename}");
                 }
-                else GameAPI.Console_Write($"ModDispatcher: no ModInterface class found");
+                else
+                {
+                    ModType = Mod.GetTypes().Where(T => T.GetInterfaces().Any(I => I.FullName.Contains(nameof(ModInterface)))).FirstOrDefault();
+                    if (ModType != null)
+                    {
+                        GameAPI.Console_Write($"ModDispatcher: no class implements: {typeof(ModInterface).AssemblyQualifiedName}\n" +
+                                                ModType.GetInterfaces()?.Aggregate("", (S, I) => S + I.AssemblyQualifiedName + "\n") +
+                                                ModType.GetMethods()?.Aggregate("", (S, M) => S + M.Name + "\n"));
+                    }
+                    else
+                    {
+                        GameAPI.Console_Write($"ModDispatcher: no ModInterface class found: " +
+                        Mod.GetTypes().Aggregate("", (S, T) => S + T.FullName + ":" + T.GetInterfaces()?.Aggregate("", (SS, I) => SS + I.FullName) + "\n"));
+                    }
+                }
             }
             catch (ReflectionTypeLoadException Error)
             {
@@ -153,14 +168,14 @@ namespace EmpyrionModHost
 
         public void Game_Update()
         {
-            Parallel.ForEach(mModInstance, M => SaveApiCall(() => M.Game_Update(), M, "Game_Update"));
+            Parallel.ForEach(mModInstance, async M => await SaveApiCall(() => M.Game_Update(), M, "Game_Update"));
         }
 
-        private void SaveApiCall(Action aCall, ModInterface aMod, string aErrorInfo)
+        private async Task SaveApiCall(Action aCall, ModInterface aMod, string aErrorInfo)
         {
             try
             {
-                aCall();
+                await Task.Run(aCall);
             }
             catch (Exception Error)
             {

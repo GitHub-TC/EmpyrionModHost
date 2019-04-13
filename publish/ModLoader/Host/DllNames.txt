@@ -2,8 +2,9 @@
 #..\MODs\EmpyrionChatAutoTranslate\EmpyrionChatAutoTranslate.dll
 #..\MODs\EmpyrionPassenger\EmpyrionPassenger.dll
 #..\MODs\EmpyrionStructureCleanUp\EmpyrionStructureCleanUp.dll
-#..\MODs\EmpyrionTeleporter\EmpyrionTeleporter.dll
+..\MODs\EmpyrionTeleporter\EmpyrionTeleporter.dll
 #..\MODs\EmpyrionXChange\EmpyrionXChange.dll
 #..\MODs\EmpyrionNCMRModHost\EmpyrionNCMRModHost.dll
-..\MODs\CommandCrate_A8\CommandCrate.dll
-..\MODs\SpotGuard_A8\SpotGuard.dll
+#..\MODs\CommandCrate_A8\CommandCrate.dll
+#..\MODs\SpotGuard_A8\SpotGuard.dll
+..\MODs\VotingRewardMod\VotingRewardMod.dll
