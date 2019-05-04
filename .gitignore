@@ -261,5 +261,5 @@ __pycache__/
 *.pyc
 
 /MODs
-!/publish
-/publish/ModLoader.zip
+/publish
+
