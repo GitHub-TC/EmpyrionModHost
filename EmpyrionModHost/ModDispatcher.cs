@@ -48,6 +48,9 @@ namespace EmpyrionModHost
         {
             mDllNamesFileName = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), "DllNames.txt");
             GameAPI = dediAPI;
+
+            SynchronizationContext.SetSynchronizationContext(new AsyncSynchronizationContext(GameAPI));
+
             try
             {
                 string CurrentDirectory = Directory.GetCurrentDirectory();

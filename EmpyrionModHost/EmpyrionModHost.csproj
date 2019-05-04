@@ -47,6 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AsyncSynchronizationContext.cs" />
     <Compile Include="ModDispatcher.cs" />
     <Compile Include="ModHostDLL.cs" />
     <Compile Include="Program.cs" />
