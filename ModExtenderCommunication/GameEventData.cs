@@ -16,10 +16,11 @@ namespace ModExtenderCommunication
 
         public static Dictionary<string, Type> EleonModdingTypes {
             get {
-                if(_mEleonModdingTypes == null) _mEleonModdingTypes = AppDomain.CurrentDomain.GetAssemblies()
-                       .SelectMany(t => t.GetTypes())
-                       .Where(t => t.Namespace == "Eleon.Modding")
-                       .ToDictionary(t => t.FullName);
+                if (_mEleonModdingTypes == null) _mEleonModdingTypes =
+                        typeof(ModInterface).Assembly
+                        .GetTypes()
+                        .Where(t => t.Namespace == "Eleon.Modding")
+                        .ToDictionary(t => t.FullName);
 
                 return _mEleonModdingTypes;
             }
