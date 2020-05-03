@@ -35,12 +35,12 @@ namespace EmpyrionModHost
 
         public void Game_Event(CmdId eventId, ushort seqNr, object data)
         {
-            Parallel.ForEach(mModInstance, async M => await SaveApiCall(() => M.Game_Event(eventId, seqNr, data), M, $"CmdId:{eventId} seqNr:{seqNr} data:{data}"));
+            Parallel.ForEach(mModInstance, async M => await SafeApiCall(() => M.Game_Event(eventId, seqNr, data), M, $"CmdId:{eventId} seqNr:{seqNr} data:{data}"));
         }
 
         public void Game_Exit()
         {
-            Parallel.ForEach(mModInstance, async M => await SaveApiCall(() => M.Game_Exit(), M, "Game_Exit"));
+            Parallel.ForEach(mModInstance, async M => await SafeApiCall(() => M.Game_Exit(), M, "Game_Exit"));
             GameExit(this, null);
         }
 
@@ -65,7 +65,7 @@ namespace EmpyrionModHost
 
                 Directory.SetCurrentDirectory(ProgramPath);
 
-                try{ Parallel.ForEach(mModInstance, async M => await SaveApiCall(() => M.Game_Start(GameAPI), M, "Game_Start")); }
+                try{ Parallel.ForEach(mModInstance, async M => await SafeApiCall(() => M.Game_Start(GameAPI), M, "Game_Start")); }
                 finally{ Directory.SetCurrentDirectory(CurrentDirectory); }
 
                 GameAPI.Console_Write($"ModDispatcher(finish:{mModInstance.Count}): {mDllNamesFileName}");
@@ -171,14 +171,26 @@ namespace EmpyrionModHost
 
         public void Game_Update()
         {
-            Parallel.ForEach(mModInstance, async M => await SaveApiCall(() => M.Game_Update(), M, "Game_Update"));
+            Parallel.ForEach(mModInstance, async M => await SafeApiCall(() => M.Game_Update(), M, "Game_Update"));
         }
 
-        private async Task SaveApiCall(Action aCall, ModInterface aMod, string aErrorInfo)
+        private async Task SafeApiCall(Action aCall, ModInterface aMod, string aErrorInfo)
         {
             try
             {
-                await Task.Run(aCall);
+                void SafeCall()
+                {
+                    try
+                    {
+                        aCall();
+                    }
+                    catch (Exception error)
+                    {
+                        GameAPI.Console_Write($"Exception [{aMod}] {aErrorInfo} => {error}");
+                    }
+                }
+
+                await Task.Run(() => SafeCall());
             }
             catch (Exception Error)
             {

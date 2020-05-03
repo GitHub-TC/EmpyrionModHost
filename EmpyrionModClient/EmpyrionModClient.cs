@@ -22,7 +22,7 @@ namespace EmpyrionModClient
         public bool WithShellWindow { get; set; }
     }
 
-    public class EmpyrionModClient : ModInterface
+    public class EmpyrionModClient : ModInterface, IMod
     {
         public ModGameAPI GameAPI { get; private set; }
         public ClientMessagePipe OutServer { get; private set; }
@@ -32,6 +32,7 @@ namespace EmpyrionModClient
         public static string ProgramPath { get; private set; } = GetDirWith(Directory.GetCurrentDirectory(), "BuildNumber.txt");
         public bool Exit { get; private set; }
         public bool ExposeShutdownHost { get; private set; }
+        public IModApi ModAPI { get; private set; }
 
         Dictionary<Type, Action<object>> InServerMessageHandler;
 
@@ -104,7 +105,8 @@ namespace EmpyrionModClient
 
             InServerMessageHandler = new Dictionary<Type, Action<object>> {
                 { typeof(EmpyrionGameEventData), M => HandleGameEvent               ((EmpyrionGameEventData)M) },
-                { typeof(ClientHostComData    ), M => HandleClientHostCommunication ((ClientHostComData)M) }
+                { typeof(ClientHostComData    ), M => HandleClientHostCommunication ((ClientHostComData)M) },
+                { typeof(ModComData           ), M => HandleModCommunication        ((ModComData)M) }
             };
 
             OutServer = new ClientMessagePipe(CurrentConfig.Current.EmpyrionToModPipeName) { log = GameAPI.Console_Write };
@@ -121,6 +123,9 @@ namespace EmpyrionModClient
         private void StartHostProcess()
         {
             var HostFilename = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), CurrentConfig.Current.PathToModHost);
+
+            if (!File.Exists(HostFilename)) File.Move(HostFilename + ".bin", HostFilename);
+
             GameAPI.Console_Write($"ModClientDll: start host '{HostFilename}'");
             mHostProcessAlive = null;
 
@@ -210,6 +215,29 @@ namespace EmpyrionModClient
             StartHostProcess();
         }
 
+        private void HandleModCommunication(ModComData msg)
+        {
+            if (OutServer == null) return;
+
+            try
+            {
+                switch (msg.Command)
+                {
+                    case ModCommand.GetPathFor: OutServer.SendMessage(new ModComData() { Command = msg.Command, SequenceId = msg.SequenceId, Data = ModAPI.Application.GetPathFor((AppFolder)msg.Data) }); break;
+                    case ModCommand.PlayfieldDataReceived:
+                        {
+                            var data = msg.Data as PlayfieldNetworkData;
+                            ModAPI.Network.SendToPlayfieldServer(data.Sender, data.PlayfieldName, data.Data);
+                            break;
+                        }
+                }
+            }
+            catch (System.Exception Error)
+            {
+                GameAPI.Console_Write($"ModClientDll: {Error.Message}");
+            }
+        }
+
         private void HandleClientHostCommunication(ClientHostComData aMsg)
         {
             switch (aMsg.Command)
@@ -230,6 +258,27 @@ namespace EmpyrionModClient
         {
             if (Exit) return;
             OutServer?.SendMessage(new ClientHostComData() { Command = ClientHostCommand.Game_Update });
+        }
+
+        public void Init(IModApi modAPI)
+        {
+            ModAPI = modAPI;
+
+            ModAPI.Network.RegisterReceiverForPlayfieldPackets(PlayfieldDataReceived);
+        }
+
+        private void PlayfieldDataReceived(string sender, string playfieldName, byte[] data)
+        {
+            OutServer?.SendMessage(new ModComData()
+            {
+                Command = ModCommand.PlayfieldDataReceived,
+                Data = new PlayfieldNetworkData() { Sender = sender, PlayfieldName = playfieldName, Data = data }
+            });
+        }
+
+        public void Shutdown()
+        {
+            OutServer?.SendMessage(new ModComData() { Command = ModCommand.Shutdown });
         }
     }
 }
