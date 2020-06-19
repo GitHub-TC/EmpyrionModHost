@@ -3,7 +3,7 @@
 Name: ModLoader
 Description: Mod for host other MODs in a seperate Host-EXE so these are capable to install, update, deinstall, activate, deactivate,restart, debug, .NET 4.6 etc... without shutdown the EGS server
 Author: ASTIC/TC
-Version: 3.0.0
+Version: 3.2.0
 Website: https://github.com/GitHub-TC/EmpyrionModHost
 
 # Possible targets: None, Dedi, PfServer, Client (the latter three can be combined)
