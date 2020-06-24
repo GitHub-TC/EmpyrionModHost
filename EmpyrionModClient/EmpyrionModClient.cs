@@ -126,13 +126,14 @@ namespace EmpyrionModClient
 
         private void ReadGlobalStructureInfoForEvent()
         {
+            var gsl = new EgsDbTools.GlobalStructureListAccess();
             while (!Exit)
             {
                 if (GetGlobalStructureList.WaitOne(1000))
                 {
                     if (GetGlobalStructureListEvents.TryDequeue(out var TypedMsg))
                     {
-                        var gsl = new EgsDbTools.GlobalStructureListAccess() { GlobalDbPath = Path.Combine(ModAPI.Application.GetPathFor(AppFolder.SaveGame), "global.db") };
+                        gsl.GlobalDbPath = Path.Combine(ModAPI.Application.GetPathFor(AppFolder.SaveGame), "global.db");
                         Game_Event(TypedMsg.eventId, TypedMsg.seqNr, gsl.CurrentList);
                     }
                     GetGlobalStructureList.Reset();
