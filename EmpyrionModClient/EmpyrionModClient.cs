@@ -21,6 +21,7 @@ namespace EmpyrionModClient
         public string ModToEmpyrionPipeName { get; set; } = "ModToEmpyrionPipe{0}";
         public int HostProcessId { get; set; }
         public bool WithShellWindow { get; set; }
+        public int GlobalStructureListUpdateIntervallInSeconds { get; set; } = 30;
     }
 
     public class EmpyrionModClient : ModInterface, IMod
@@ -133,8 +134,14 @@ namespace EmpyrionModClient
                 {
                     if (GetGlobalStructureListEvents.TryDequeue(out var TypedMsg))
                     {
+                        gsl.UpdateIntervallInSeconds = CurrentConfig.Current.GlobalStructureListUpdateIntervallInSeconds;
                         gsl.GlobalDbPath = Path.Combine(ModAPI.Application.GetPathFor(AppFolder.SaveGame), "global.db");
-                        Game_Event(TypedMsg.eventId, TypedMsg.seqNr, gsl.CurrentList);
+
+                        switch (TypedMsg.eventId)
+                        {
+                            case CmdId.Request_GlobalStructure_List:                            Game_Event(TypedMsg.eventId, TypedMsg.seqNr, gsl.CurrentList); break;
+                            case CmdId.Request_GlobalStructure_Update: gsl.UpdateNow = true;    Game_Event(TypedMsg.eventId, TypedMsg.seqNr, true); break;
+                        }
                     }
                     GetGlobalStructureList.Reset();
                 }
