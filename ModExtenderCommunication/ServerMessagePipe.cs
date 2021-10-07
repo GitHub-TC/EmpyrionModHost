@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.IO.Pipes;
 using System.Threading;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
