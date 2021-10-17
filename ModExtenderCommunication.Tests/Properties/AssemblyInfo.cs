@@ -4,9 +4,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("ModExtenderCommunication.Tests")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("ASTIC/TC")]
 [assembly: AssemblyProduct("ModExtenderCommunication.Tests")]
-[assembly: AssemblyCopyright("Copyright ©  2018")]
+[assembly: AssemblyCopyright("ASTIC/TC ©2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
