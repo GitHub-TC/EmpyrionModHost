@@ -29,6 +29,7 @@ namespace ModExtenderCommunication
         private void ServerCommunicationLoop()
         {
             var ShownErrors = new List<string>();
+            var tryCount = 0;
             while (!Exit)
             {
                 try
@@ -36,6 +37,16 @@ namespace ModExtenderCommunication
                     ExecServerCommunication();
                 }
                 catch (ThreadAbortException) { return; }
+                catch (FileNotFoundException Error)
+                {
+                    if (!ShownErrors.Contains(Error.Message) && tryCount++ > 60)
+                    {
+                        ShownErrors.Add(Error.Message);
+                        log?.Invoke($"Try to connect ExecServerCommunication. {PipeName} Reason: " + Error);
+                    }
+
+                    if (!Exit) Thread.Sleep(1000);
+                }
                 catch (Exception Error)
                 {
                     if (!ShownErrors.Contains(Error.Message))
