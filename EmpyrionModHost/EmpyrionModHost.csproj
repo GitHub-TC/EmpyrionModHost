@@ -103,9 +103,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="DllNames.txt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <None Include="DllNames.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -89,4 +89,11 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\System.Data.SQLite.Core.1.0.113.0\build\net46\System.Data.SQLite.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.Data.SQLite.Core.1.0.113.0\build\net46\System.Data.SQLite.Core.targets'))" />
   </Target>
+  <PropertyGroup>
+    <PostBuildEvent>xcopy "$(TargetDir)x86\*.*" "C:\steamcmd\empyrion\Content\Mods\ModLoader\Client\x86\*.*" /Y
+xcopy "$(TargetDir)x64\*.*" "C:\steamcmd\empyrion\Content\Mods\ModLoader\Client\x64\*.*" /Y
+xcopy "$(TargetDir)x86\*.*" "$(SolutionDir)publish\ModLoader\Client\x86\*.*" /Y
+xcopy "$(TargetDir)x64\*.*" "$(SolutionDir)publish\ModLoader\Client\x64\*.*" /Y
+</PostBuildEvent>
+  </PropertyGroup>
 </Project>

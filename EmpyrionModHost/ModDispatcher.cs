@@ -70,6 +70,8 @@ namespace EmpyrionModHost
                 string CurrentDirectory = Directory.GetCurrentDirectory();
                 GameAPI.Console_Write($"ModDispatcher(start): {mDllNamesFileName} in {CurrentDirectory}");
 
+                if (!File.Exists(mDllNamesFileName)) File.WriteAllText(mDllNamesFileName, @"#..\[PathToDLLFile]");
+
                 mAssemblyFileNames = File.ReadAllLines(mDllNamesFileName)
                     .Select(L => L.Trim())
                     .Where(L => !string.IsNullOrEmpty(L) && !L.StartsWith("#"))

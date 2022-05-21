@@ -62,6 +62,8 @@ namespace ModLoader
                 Interlocked.Increment(ref inst);
                 mGameAPI.Console_Write($"LoadMod(start)[{inst}]: {mDllNamesFileName}");
 
+                if (!File.Exists(mDllNamesFileName)) File.WriteAllText(mDllNamesFileName, @"#..\[PathToDLLFile]");
+
                 mAssemblyFileNames = File.ReadAllLines(mDllNamesFileName)
                     .Select(L => L.Trim())
                     .Where(L => !string.IsNullOrEmpty(L) && !L.StartsWith("#"))
