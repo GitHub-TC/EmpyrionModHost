@@ -40,8 +40,22 @@ namespace EmpyrionModHost
 
         public void Game_Exit()
         {
-            Parallel.ForEach(mModInstance, async M => await SafeApiCall(() => M.Game_Exit(), M, "Game_Exit"));
-            GameExit(this, null);
+            try
+            {
+                var timeoutForExitCall = new CancellationTokenSource(10000).Token;
+                Parallel.ForEach(mModInstance, new ParallelOptions { CancellationToken = timeoutForExitCall }, async M => await SafeApiCall(() => M.Game_Exit(), M, "Game_Exit"));
+            }
+            catch (Exception error) { GameAPI.Console_Write($"Game_Exit(ExitCall): {error}"); }
+
+            try
+            {
+                var timeoutForExitHandler = new CancellationTokenSource(10000).Token;
+                Task.Run(() => GameExit(this, null), timeoutForExitHandler);
+            }
+            catch (Exception error) { 
+                GameAPI.Console_Write($"Game_Exit(ExitHandler): {error}");
+                Environment.Exit(Environment.ExitCode);
+            }
         }
 
         public void Game_Start(ModGameAPI dediAPI)
