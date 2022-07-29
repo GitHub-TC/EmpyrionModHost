@@ -7,8 +7,8 @@
     <ProjectGuid>{D27A6C05-1331-4D5D-8238-BE3A6120E9CD}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>EgsDbTools</RootNamespace>
-    <AssemblyName>GlobalStructureList</AssemblyName>
+    <RootNamespace>EgsModClientDbTools</RootNamespace>
+    <AssemblyName>GlobalStructureListModClient</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>

@@ -1,4 +1,5 @@
-﻿using Eleon.Modding;
+﻿using EgsModClientDbTools;
+using Eleon.Modding;
 using ModExtenderCommunication;
 using System;
 using System.Collections.Concurrent;
@@ -41,6 +42,7 @@ namespace EmpyrionModClient
         ConfigurationManager<Configuration> CurrentConfig;
         public AutoResetEvent GetGlobalStructureList { get; set; } = new AutoResetEvent(false);
         public ConcurrentQueue<EmpyrionGameEventData> GetGlobalStructureListEvents { get; set; } = new ConcurrentQueue<EmpyrionGameEventData>();
+        public GlobalStructureListAccess GSL { get; private set; }
 
         private static string GetDirWith(string aTestDir, string aTestFile)
         {
@@ -127,20 +129,20 @@ namespace EmpyrionModClient
 
         private void ReadGlobalStructureInfoForEvent()
         {
-            var gsl = new EgsDbTools.GlobalStructureListAccess();
+            GSL = new EgsModClientDbTools.GlobalStructureListAccess();
             while (!Exit)
             {
                 if (GetGlobalStructureList.WaitOne(1000))
                 {
                     if (GetGlobalStructureListEvents.TryDequeue(out var TypedMsg))
                     {
-                        gsl.UpdateIntervallInSeconds = CurrentConfig.Current.GlobalStructureListUpdateIntervallInSeconds;
-                        gsl.GlobalDbPath = Path.Combine(ModAPI.Application.GetPathFor(AppFolder.SaveGame), "global.db");
+                        GSL.UpdateIntervallInSeconds = CurrentConfig.Current.GlobalStructureListUpdateIntervallInSeconds;
+                        GSL.GlobalDbPath = Path.Combine(ModAPI.Application.GetPathFor(AppFolder.SaveGame), "global.db");
 
                         switch (TypedMsg.eventId)
                         {
-                            case CmdId.Request_GlobalStructure_List:                            Game_Event(TypedMsg.eventId, TypedMsg.seqNr, gsl.CurrentList); break;
-                            case CmdId.Request_GlobalStructure_Update: gsl.UpdateNow = true;    Game_Event(TypedMsg.eventId, TypedMsg.seqNr, true); break;
+                            case CmdId.Request_GlobalStructure_List:                            Game_Event(TypedMsg.eventId, TypedMsg.seqNr, GSL.CurrentList); break;
+                            case CmdId.Request_GlobalStructure_Update: GSL.UpdateNow = true;    Game_Event(TypedMsg.eventId, TypedMsg.seqNr, true); break;
                         }
                     }
                     GetGlobalStructureList.Reset();
@@ -278,10 +280,24 @@ namespace EmpyrionModClient
 
         private void HandleGameEvent(EmpyrionGameEventData TypedMsg)
         {
-            if (TypedMsg.eventId == CmdId.Request_GlobalStructure_List)
+            if (TypedMsg.eventId == CmdId.Request_GlobalStructure_List || TypedMsg.eventId == CmdId.Request_GlobalStructure_Update)
             {
                 GetGlobalStructureListEvents.Enqueue(TypedMsg);
                 GetGlobalStructureList.Set();
+            }
+            else if (TypedMsg.eventId == CmdId.Request_GlobalStructure_List + 100)
+            {
+                try
+                {
+                    GSL.GlobalDbPath = Path.Combine(ModAPI.Application.GetPathFor(AppFolder.SaveGame), "global.db");
+
+                    var id = TypedMsg.GetEmpyrionObject() as Id;
+                    Game_Event(TypedMsg.eventId, TypedMsg.seqNr, GSL.ReadGlobalStructureInfo(id));
+                }
+                catch (Exception error)
+                {
+                    GameAPI.Console_Write($"ModClientDll:Request_GlobalStructure_Info: {error}");
+                }
             }
             else GameAPI.Game_Request(TypedMsg.eventId, TypedMsg.seqNr, TypedMsg.GetEmpyrionObject());
         }
