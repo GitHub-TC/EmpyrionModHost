@@ -299,6 +299,20 @@ namespace EmpyrionModClient
                     GameAPI.Console_Write($"ModClientDll:Request_GlobalStructure_Info: {error}");
                 }
             }
+            else if (TypedMsg.eventId == CmdId.Event_ChatMessage + 100)
+            {
+                object receiveObject = null;
+                try
+                {
+                    receiveObject = TypedMsg.GetEmpyrionObject<Eleon.MessageData>();
+                    ModAPI.Application.SendChatMessage(receiveObject as Eleon.MessageData);
+                    Game_Event(TypedMsg.eventId, TypedMsg.seqNr, true);
+                }
+                catch (Exception error)
+                {
+                    ModAPI.LogError($"SendChatMessage:[{receiveObject}] {error}");
+                }
+            }
             else GameAPI.Game_Request(TypedMsg.eventId, TypedMsg.seqNr, TypedMsg.GetEmpyrionObject());
         }
 
