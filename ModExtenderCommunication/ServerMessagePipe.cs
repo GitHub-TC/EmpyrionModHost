@@ -18,6 +18,7 @@ namespace ModExtenderCommunication
         public string PipeName { get; }
         public Action<object> Callback { get; set; }
         public bool Exit { get; private set; }
+        public bool Connected { get; private set; }
 
         public ServerMessagePipe(string aPipeName)
         {
@@ -76,6 +77,7 @@ namespace ModExtenderCommunication
                 }
 
                 mDataBuffer = new byte[bufferSize];
+                Connected = true;
 
                 while (!Exit)
                 {
@@ -85,6 +87,8 @@ namespace ModExtenderCommunication
 
                     if ((DateTime.Now - mLastPing.Value).TotalSeconds > 5) return;
                 }
+
+                Connected = false;
             }
         }
 

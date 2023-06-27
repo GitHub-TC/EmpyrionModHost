@@ -154,7 +154,11 @@ namespace EmpyrionModClient
         {
             var HostFilename = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), CurrentConfig.Current.PathToModHost);
 
-            if (!File.Exists(HostFilename)) File.Move(HostFilename + ".bin", HostFilename);
+            if (!File.Exists(HostFilename) || File.GetLastWriteTime(HostFilename) < File.GetLastWriteTime(HostFilename + ".bin"))
+            {
+                GameAPI.Console_Write($"Update/Create: '{HostFilename}'");
+                File.Copy(HostFilename + ".bin", HostFilename, true);
+            }
 
             GameAPI.Console_Write($"ModClientDll: start host '{HostFilename}'");
             mHostProcessAlive = null;
@@ -202,11 +206,11 @@ namespace EmpyrionModClient
 
                 mHostProcess.Start();
                 CurrentConfig.Current.HostProcessId = mHostProcess.Id;
-                GameAPI.Console_Write($"ModClientDll: host started '{HostFilename}/{mHostProcess.Id}'");
+                GameAPI.Console_Write($"ModClientDll: host started '{HostFilename} {mHostProcess?.StartInfo?.Arguments}' -> {mHostProcess.Id}");
             }
             catch (Exception Error)
             {
-                GameAPI.Console_Write($"ModClientDll: host start error '{HostFilename} -> {Error}'");
+                GameAPI.Console_Write($"ModClientDll: host start error '{HostFilename} -> {mHostProcess?.StartInfo?.Arguments} -> {Error}'");
                 mHostProcess = null;
             }
         }

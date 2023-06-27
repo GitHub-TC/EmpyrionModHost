@@ -2,6 +2,7 @@
 using ModExtenderCommunication;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace EmpyrionModHost
 {
@@ -28,6 +29,8 @@ namespace EmpyrionModHost
             FromEmpyrion = new ServerMessagePipe(CommandLineOptions.GetOption("-EmpyrionToModPipe", "EmpyrionToModPipe")) { log = LogOut };
 
             FromEmpyrion.Callback = Msg => { if (InServerMessageHandler.TryGetValue(Msg.GetType(), out Action<object> Handler)) Handler(Msg); };
+
+            for (int i = 20; i >= 0 && !FromEmpyrion.Connected; i--) Thread.Sleep(1000);
 
             Dispatcher.Game_Start(this);
         }
