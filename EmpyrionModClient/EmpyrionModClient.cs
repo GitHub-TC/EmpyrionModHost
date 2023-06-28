@@ -195,22 +195,40 @@ namespace EmpyrionModClient
                 {
                     StartInfo = new ProcessStartInfo(HostFilename)
                     {
-                        UseShellExecute = CurrentConfig.Current.WithShellWindow,
-                        CreateNoWindow = true,
-                        WorkingDirectory = ProgramPath,
-                        Arguments = Environment.GetCommandLineArgs().Aggregate(
+                        UseShellExecute        = CurrentConfig.Current.WithShellWindow,
+                        CreateNoWindow         = true,
+                        WorkingDirectory       = ProgramPath,
+                        RedirectStandardError  = true,
+                        RedirectStandardOutput = true,
+                        Arguments              = Environment.GetCommandLineArgs().Aggregate(
                             $"-EmpyrionToModPipe {CurrentConfig.Current.EmpyrionToModPipeName} -ModToEmpyrionPipe {CurrentConfig.Current.ModToEmpyrionPipeName}",
                             (C, A) => C + " " + A),
                     }
                 };
 
+                mHostProcess.OutputDataReceived += (object sender, DataReceivedEventArgs e) => { if (!string.IsNullOrEmpty(e.Data)) GameAPI.Console_Write($"EmpyrionModHost: {e.Data}"); };
+                mHostProcess.ErrorDataReceived  += (object sender, DataReceivedEventArgs e) => { if (!string.IsNullOrEmpty(e.Data)) GameAPI.Console_Write($"EmpyrionModHost(error): {e.Data}"); };
+
                 mHostProcess.Start();
+
+                mHostProcess.BeginErrorReadLine();
+                mHostProcess.BeginOutputReadLine();
+
                 CurrentConfig.Current.HostProcessId = mHostProcess.Id;
-                GameAPI.Console_Write($"ModClientDll: host started '{HostFilename} {mHostProcess?.StartInfo?.Arguments}' -> {mHostProcess.Id}");
+                GameAPI.Console_Write($"host started '{HostFilename} {mHostProcess?.StartInfo?.Arguments}' -> {mHostProcess.Id}");
+
+                new Thread(() => {
+                    for (int i = 300; i >= 0 && !InServer.Connected; i--)
+                    {
+                        if(mHostProcess.HasExited) GameAPI.Console_Write($"EmpyrionModHost CPU:{mHostProcess?.UserProcessorTime} RAM:{mHostProcess?.PrivateMemorySize64} ExitTime:{mHostProcess?.ExitTime} ExitCode:{mHostProcess?.ExitCode}");
+                        else                       GameAPI.Console_Write($"EmpyrionModHost CPU:{mHostProcess?.UserProcessorTime} RAM:{mHostProcess?.PrivateMemorySize64}");
+                        Thread.Sleep(10000);
+                    }
+                } ).Start();
             }
             catch (Exception Error)
             {
-                GameAPI.Console_Write($"ModClientDll: host start error '{HostFilename} -> {mHostProcess?.StartInfo?.Arguments} -> {Error}'");
+                GameAPI.Console_Write($"host start error '{HostFilename} -> {mHostProcess?.StartInfo?.Arguments} -> {Error}'");
                 mHostProcess = null;
             }
         }

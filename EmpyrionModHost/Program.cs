@@ -8,14 +8,27 @@ namespace EmpyrionModHost
     {
         static void Main(string[] args)
         {
-            var Host = new ModHostDLL();
-            Host.InitComunicationChannels();
+            try
+            {
+                Console.WriteLine("started");
 
-            var Exit = new AutoResetEvent(false);
-            Host.Dispatcher.GameExit += (S, A) => Exit.Set();
-            Exit.WaitOne();
+                var Host = new ModHostDLL();
+                Host.InitComunicationChannels();
 
-            Environment.Exit(Environment.ExitCode);
+                Console.WriteLine("WaitForExit");
+
+                var Exit = new AutoResetEvent(false);
+                Host.Dispatcher.GameExit += (S, A) => Exit.Set();
+                Exit.WaitOne();
+
+                Console.WriteLine($"Exit:{Environment.ExitCode}");
+
+                Environment.Exit(Environment.ExitCode);
+            }
+            catch (Exception error)
+            {
+                Console.WriteLine($"Error:{error}");
+            }
         }
 
     }

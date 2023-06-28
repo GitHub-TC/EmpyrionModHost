@@ -2,6 +2,7 @@
 using ModExtenderCommunication;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 namespace EmpyrionModHost
@@ -25,20 +26,19 @@ namespace EmpyrionModHost
         {
             Dispatcher = new ModDispatcher();
 
-            ToEmpyrion   = new ClientMessagePipe(CommandLineOptions.GetOption("-ModToEmpyrionPipe", "ModToEmpyrionPipe")) { log = LogOut };
-            FromEmpyrion = new ServerMessagePipe(CommandLineOptions.GetOption("-EmpyrionToModPipe", "EmpyrionToModPipe")) { log = LogOut };
+            Console.WriteLine("ModHostDLL:start");
+
+            ToEmpyrion   = new ClientMessagePipe(CommandLineOptions.GetOption("-ModToEmpyrionPipe", "ModToEmpyrionPipe")) { log = Console.WriteLine };
+            FromEmpyrion = new ServerMessagePipe(CommandLineOptions.GetOption("-EmpyrionToModPipe", "EmpyrionToModPipe")) { log = Console.WriteLine };
+
+            Console.WriteLine("ModHostDLL:Pipe initialized");
 
             FromEmpyrion.Callback = Msg => { if (InServerMessageHandler.TryGetValue(Msg.GetType(), out Action<object> Handler)) Handler(Msg); };
 
             for (int i = 20; i >= 0 && !FromEmpyrion.Connected; i--) Thread.Sleep(1000);
 
+            Console.WriteLine("ModHostDLL:Dispatcher.Game_Start");
             Dispatcher.Game_Start(this);
-        }
-
-        private void LogOut(string aMsg)
-        {
-            if (Dispatcher != null && Dispatcher.GameAPI != null) Dispatcher.GameAPI.Console_Write(aMsg);
-            else                                                  Console.WriteLine(aMsg);
         }
 
         private void HandleClientHostCommunication(ClientHostComData aMsg)
@@ -60,8 +60,7 @@ namespace EmpyrionModHost
 
         public void Console_Write(string aMsg)
         {
-            //Console.WriteLine($"Console_Write:{aMsg}");
-            ToEmpyrion.SendMessage(new ClientHostComData() { Command = ClientHostCommand.Console_Write, Data = aMsg });
+            Console.WriteLine(aMsg);
         }
 
         public ulong Game_GetTickTime()
