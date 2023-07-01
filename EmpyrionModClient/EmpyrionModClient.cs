@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 
 namespace EmpyrionModClient
@@ -198,30 +199,48 @@ namespace EmpyrionModClient
                         UseShellExecute        = CurrentConfig.Current.WithShellWindow,
                         CreateNoWindow         = true,
                         WorkingDirectory       = ProgramPath,
-                        RedirectStandardError  = true,
-                        RedirectStandardOutput = true,
+                        RedirectStandardError  = !CurrentConfig.Current.WithShellWindow,
+                        RedirectStandardOutput = !CurrentConfig.Current.WithShellWindow,
                         Arguments              = Environment.GetCommandLineArgs().Aggregate(
                             $"-EmpyrionToModPipe {CurrentConfig.Current.EmpyrionToModPipeName} -ModToEmpyrionPipe {CurrentConfig.Current.ModToEmpyrionPipeName}",
                             (C, A) => C + " " + A),
                     }
                 };
 
-                mHostProcess.OutputDataReceived += (object sender, DataReceivedEventArgs e) => { if (!string.IsNullOrEmpty(e.Data)) GameAPI.Console_Write($"EmpyrionModHost: {e.Data}"); };
-                mHostProcess.ErrorDataReceived  += (object sender, DataReceivedEventArgs e) => { if (!string.IsNullOrEmpty(e.Data)) GameAPI.Console_Write($"EmpyrionModHost(error): {e.Data}"); };
+                if (!CurrentConfig.Current.WithShellWindow)
+                {
+                    mHostProcess.OutputDataReceived += (object sender, DataReceivedEventArgs e) => { if (!string.IsNullOrEmpty(e.Data)) GameAPI.Console_Write($"EmpyrionModHost: {e.Data}"); };
+                    mHostProcess.ErrorDataReceived  += (object sender, DataReceivedEventArgs e) => { if (!string.IsNullOrEmpty(e.Data)) GameAPI.Console_Write($"EmpyrionModHost(error): {e.Data}"); };
+                }
+                mHostProcess.Exited             += (object sender, EventArgs e) => GameAPI.Console_Write($"EmpyrionModHost: exit at {mHostProcess.ExitTime} with {mHostProcess.ExitCode} runs for {mHostProcess.ExitTime - mHostProcess.StartTime} ");
+                mHostProcess.EnableRaisingEvents = true;
 
                 mHostProcess.Start();
 
-                mHostProcess.BeginErrorReadLine();
-                mHostProcess.BeginOutputReadLine();
+                if (!CurrentConfig.Current.WithShellWindow)
+                {
+                    mHostProcess.BeginErrorReadLine();
+                    mHostProcess.BeginOutputReadLine();
+                }
 
                 CurrentConfig.Current.HostProcessId = mHostProcess.Id;
-                GameAPI.Console_Write($"host started '{HostFilename} {mHostProcess?.StartInfo?.Arguments}' -> {mHostProcess.Id}");
+                GameAPI.Console_Write($"host started ({(CurrentConfig.Current.WithShellWindow ? "shell" : "direct")}) '{HostFilename} {mHostProcess?.StartInfo?.Arguments}' -> {mHostProcess.Id}");
 
                 new Thread(() => {
-                    for (int i = 300; i >= 0 && !InServer.Connected; i--)
+                    for (int i = 30; i >= 0; i--)
                     {
-                        if(mHostProcess.HasExited) GameAPI.Console_Write($"EmpyrionModHost CPU:{mHostProcess?.UserProcessorTime} RAM:{mHostProcess?.PrivateMemorySize64} ExitTime:{mHostProcess?.ExitTime} ExitCode:{mHostProcess?.ExitCode}");
-                        else                       GameAPI.Console_Write($"EmpyrionModHost CPU:{mHostProcess?.UserProcessorTime} RAM:{mHostProcess?.PrivateMemorySize64}");
+                        var info = new StringBuilder("EmpyrionModHost ");
+
+                        info.Append($"CPU:{mHostProcess?.UserProcessorTime}/{mHostProcess?.PrivilegedProcessorTime} ");
+                        info.Append($"RAM:{mHostProcess?.PrivateMemorySize64} ");
+                        info.Append($"Prio:{mHostProcess?.BasePriority} ");
+                        info.Append($"Responding:{mHostProcess?.Responding} ");
+                        info.Append($"Threads:{mHostProcess?.Threads?.Count}{mHostProcess?.Threads.OfType<ProcessThread>().Aggregate("", (s, t) => $"{s} {t.Id}={t.ThreadState}")} ");
+
+                        GameAPI.Console_Write(info.ToString());
+
+                        if (InServer.Connected) break;
+
                         Thread.Sleep(10000);
                     }
                 } ).Start();
