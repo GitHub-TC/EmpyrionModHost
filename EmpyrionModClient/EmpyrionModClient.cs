@@ -15,6 +15,8 @@ namespace EmpyrionModClient
 {
     public class Configuration
     {
+        public string StartWith { get; set; }
+        public string WorkingDirectory { get; set; }
         public string PathToModHost { get; set; } = @"..\Host\EmpyrionModHost.exe";
         public bool AutostartModHost { get; set; } = true;
         public int AutostartModHostAfterNSeconds { get; set; } = 10;
@@ -44,6 +46,7 @@ namespace EmpyrionModClient
         public AutoResetEvent GetGlobalStructureList { get; set; } = new AutoResetEvent(false);
         public ConcurrentQueue<EmpyrionGameEventData> GetGlobalStructureListEvents { get; set; } = new ConcurrentQueue<EmpyrionGameEventData>();
         public GlobalStructureListAccess GSL { get; private set; }
+        public int StopCountdown { get; private set; }
 
         private static string GetDirWith(string aTestDir, string aTestFile)
         {
@@ -153,15 +156,22 @@ namespace EmpyrionModClient
 
         private void StartHostProcess()
         {
-            var HostFilename = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), CurrentConfig.Current.PathToModHost);
+            var HostFilename                 = Path.Combine(Path.GetDirectoryName(Assembly.GetAssembly(GetType()).Location), CurrentConfig.Current.PathToModHost);
+            var HostFilenameWithoutExtension = Path.Combine(Path.GetDirectoryName(HostFilename), Path.GetFileNameWithoutExtension(HostFilename));
 
-            if (!File.Exists(HostFilename) || File.GetLastWriteTime(HostFilename) < File.GetLastWriteTime(HostFilename + ".bin"))
+            if (File.Exists(HostFilenameWithoutExtension + ".bin") &&  (!File.Exists(HostFilename) || File.GetLastWriteTime(HostFilename) < File.GetLastWriteTime(HostFilenameWithoutExtension + ".bin")))
             {
                 GameAPI.Console_Write($"Update/Create: '{HostFilename}'");
-                File.Copy(HostFilename + ".bin", HostFilename, true);
+                File.Copy(HostFilenameWithoutExtension + ".bin", HostFilename, true);
             }
 
-            GameAPI.Console_Write($"ModClientDll: start host '{HostFilename}'");
+            if (File.Exists(HostFilenameWithoutExtension + ".bin.config") && (!File.Exists(HostFilename + ".config") || File.GetLastWriteTime(HostFilename + ".config") < File.GetLastWriteTime(HostFilenameWithoutExtension + ".bin.config")))
+            {
+                GameAPI.Console_Write($"Update/Create: '{HostFilename}'");
+                File.Copy(HostFilenameWithoutExtension + ".bin.config", HostFilename + ".config", true);
+            }
+
+            GameAPI.Console_Write($"ModClientDll: start host: {CurrentConfig.Current.StartWith}:{(string.IsNullOrEmpty(CurrentConfig.Current.StartWith) ? HostFilename : CurrentConfig.Current.StartWith)} -> {mHostProcess?.StartInfo?.FileName} {mHostProcess?.StartInfo?.Arguments} Dir:{mHostProcess?.StartInfo?.WorkingDirectory}");
             mHostProcessAlive = null;
 
             if (CurrentConfig.Current.HostProcessId != 0)
@@ -194,16 +204,16 @@ namespace EmpyrionModClient
             {
                 mHostProcess = new Process
                 {
-                    StartInfo = new ProcessStartInfo(HostFilename)
+                    StartInfo = new ProcessStartInfo(string.IsNullOrEmpty(CurrentConfig.Current.StartWith) ? HostFilename : CurrentConfig.Current.StartWith)
                     {
                         UseShellExecute        = CurrentConfig.Current.WithShellWindow,
                         CreateNoWindow         = true,
-                        WorkingDirectory       = ProgramPath,
+                        WorkingDirectory       = string.IsNullOrEmpty(CurrentConfig.Current.WorkingDirectory) ? ProgramPath : CurrentConfig.Current.WorkingDirectory,
                         RedirectStandardError  = !CurrentConfig.Current.WithShellWindow,
                         RedirectStandardOutput = !CurrentConfig.Current.WithShellWindow,
                         Arguments              = Environment.GetCommandLineArgs().Aggregate(
-                            $"-EmpyrionToModPipe {CurrentConfig.Current.EmpyrionToModPipeName} -ModToEmpyrionPipe {CurrentConfig.Current.ModToEmpyrionPipeName}",
-                            (C, A) => C + " " + A),
+                            $"{(string.IsNullOrEmpty(CurrentConfig.Current.StartWith) ? "" : $"\"{CurrentConfig.Current.PathToModHost}\"")} -EmpyrionToModPipe {CurrentConfig.Current.EmpyrionToModPipeName} -ModToEmpyrionPipe {CurrentConfig.Current.ModToEmpyrionPipeName}",
+                            (C, A) => C + " " + (A.StartsWith("-") ? A : $"\"{A}\"")),
                     }
                 };
 
@@ -224,7 +234,7 @@ namespace EmpyrionModClient
                 }
 
                 CurrentConfig.Current.HostProcessId = mHostProcess.Id;
-                GameAPI.Console_Write($"host started ({(CurrentConfig.Current.WithShellWindow ? "shell" : "direct")}) '{HostFilename} {mHostProcess?.StartInfo?.Arguments}' -> {mHostProcess.Id}");
+                GameAPI.Console_Write($"host started ({(CurrentConfig.Current.WithShellWindow ? "shell" : "direct")}) 'start with {CurrentConfig.Current.StartWith}:{(string.IsNullOrEmpty(CurrentConfig.Current.StartWith) ? HostFilename : CurrentConfig.Current.StartWith)} {mHostProcess?.StartInfo?.Arguments}' -> {mHostProcess.Id}");
 
                 new Thread(() => {
                     for (int i = 30; i >= 0; i--)
@@ -247,7 +257,7 @@ namespace EmpyrionModClient
             }
             catch (Exception Error)
             {
-                GameAPI.Console_Write($"host start error '{HostFilename} -> {mHostProcess?.StartInfo?.Arguments} -> {Error}'");
+                GameAPI.Console_Write($"host start error: {CurrentConfig.Current.StartWith}:{(string.IsNullOrEmpty(CurrentConfig.Current.StartWith) ? HostFilename : CurrentConfig.Current.StartWith)} -> {mHostProcess?.StartInfo?.FileName} {mHostProcess?.StartInfo?.Arguments} Dir:{mHostProcess?.StartInfo?.WorkingDirectory} -> {Error} {Error.Source} {Error.StackTrace}");
                 mHostProcess = null;
             }
         }
@@ -268,12 +278,20 @@ namespace EmpyrionModClient
                         Thread.Sleep(1000);
 
                         GameAPI.Console_Write($"ModClientDll: stopped");
+
+                        if(StopCountdown++ > 60)
+                        {
+                            mHostProcess.Kill();
+                            mHostProcess      = null;
+                            mHostProcessAlive = null;
+                        }
                     }
                 }
                 catch { }
 
                 return;
             }
+            else StopCountdown = 0;
 
             if (CurrentConfig.Current.AutostartModHostAfterNSeconds == 0 || !CurrentConfig.Current.AutostartModHost) return;
             try { if (mHostProcess != null && !mHostProcess.HasExited) return; } catch { }
